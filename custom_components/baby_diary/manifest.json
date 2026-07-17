@@ -1,0 +1,14 @@
+{
+  "domain": "baby_diary",
+  "name": "Baby Diary",
+  "after_dependencies": ["frontend", "http"],
+  "codeowners": ["@carlosmorgado"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/carlosmorgado/baby-diary-hacs",
+  "integration_type": "service",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/carlosmorgado/baby-diary-hacs/issues",
+  "requirements": [],
+  "version": "0.3.0"
+}

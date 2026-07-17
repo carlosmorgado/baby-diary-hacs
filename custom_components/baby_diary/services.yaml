@@ -1,0 +1,26 @@
+log_diaper_change:
+  name: Log diaper change
+  description: Log one diaper change for a Baby Diary baby.
+  fields:
+    type:
+      name: Type
+      description: The type of diaper change.
+      required: true
+      selector:
+        select:
+          options:
+            - xixi
+            - coco
+            - ambos
+    baby_name:
+      name: Baby name
+      description: Optional Baby Diary baby name or slug. Only needed when tracking multiple babies.
+      required: false
+      selector:
+        text:
+    entry_id:
+      name: Entry ID
+      description: Optional Baby Diary config entry ID. Baby name is preferred for dashboards and automations.
+      required: false
+      selector:
+        text:
