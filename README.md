@@ -80,6 +80,18 @@ target:
   entity_id: button.log_xixi_goncalo
 ```
 
+## Frontend Runtime
+
+The integration ships one frontend module at `custom_components/baby_diary/frontend/baby-diary.js`.
+
+That file is necessary because Home Assistant needs browser-side JavaScript to register:
+
+- `custom:baby-diary-diaper-card`
+- the `baby:` custom iconset
+- `window.babyDiaryHacs.colors`
+
+The icons and colors live in that frontend module so the integration has one runtime source of truth. A root `assets/` folder would not be a reliable runtime source for a HACS integration install, and keeping separate SVG/CSS copies created duplication.
+
 ## Icons And Colors
 
 The integration automatically loads the `baby:` iconset:
@@ -95,13 +107,19 @@ icon: baby:mamada
 
 The browser also receives the Baby Diary palette at `window.babyDiaryHacs.colors`.
 
-See [docs/icons.md](docs/icons.md) for the full icon, alias, color, and asset reference.
+See [docs/icons.md](docs/icons.md) for the full icon, alias, and color reference.
+
+## Brand Icons
+
+Two identical brand PNGs are intentionally kept:
+
+- `brand/icon.png` is used by HACS for the repository listing.
+- `custom_components/baby_diary/brand/icon.png` is used by Home Assistant for the installed integration UI.
 
 ## Repository Layout
 
 ```text
 custom_components/baby_diary/  Home Assistant integration runtime
-assets/                        Colored SVG design assets
 brand/                         HACS repository brand icon
 docs/                          Short reference docs
 ```

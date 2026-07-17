@@ -31,8 +31,8 @@ from .store import BabyDiaryStore
 
 _LOGGER = logging.getLogger(__name__)
 
-FRONTEND_FILE = Path(__file__).parent / "frontend" / "baby-diary-hacs.js"
-FRONTEND_URL = f"/{DOMAIN}/baby-diary-hacs.js"
+FRONTEND_FILE = Path(__file__).parent / "frontend" / "baby-diary.js"
+FRONTEND_URL = f"/{DOMAIN}/baby-diary.js"
 
 LOG_DIAPER_SCHEMA = vol.Schema(
     {

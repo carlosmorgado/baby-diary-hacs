@@ -31,8 +31,8 @@ The palette is available in the browser as:
 window.babyDiaryHacs.colors
 ```
 
-## Assets
+## Runtime Source
 
-Colored SVG design assets live in [assets](../assets). They are for documentation, previews, and reuse outside the Home Assistant iconset.
+The runtime icon paths and palette live in `custom_components/baby_diary/frontend/baby-diary.js`.
 
 Home Assistant iconsets are monochrome by design, so `baby:` icons use the current Home Assistant icon color.
