@@ -2,6 +2,8 @@
 
 The Baby Diary integration loads the `baby:` iconset automatically.
 
+No dashboard resource is needed. The iconset is registered by `custom_components/baby_diary/frontend/baby-diary.js` when the integration is loaded.
+
 ## Icons
 
 | Meaning | Primary | Aliases |
@@ -36,3 +38,13 @@ window.babyDiaryHacs.colors
 The runtime icon paths and palette live in `custom_components/baby_diary/frontend/baby-diary.js`.
 
 Home Assistant iconsets are monochrome by design, so `baby:` icons use the current Home Assistant icon color.
+
+## Example
+
+```yaml
+type: tile
+entity: sensor.daily_fraldas_goncalo_counter
+name: Fraldas
+icon: baby:diaper
+color: white
+```
