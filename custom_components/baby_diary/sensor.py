@@ -11,9 +11,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
-    CONF_BABY_NAME,
     DATA_STORES,
-    DEFAULT_BABY_NAME,
     DOMAIN,
     METRIC_COCO,
     METRIC_DIAPERS,
@@ -29,7 +27,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up Baby Diary sensors."""
     store: BabyDiaryStore = hass.data[DOMAIN][DATA_STORES][entry.entry_id]
-    baby_name = entry.data.get(CONF_BABY_NAME, DEFAULT_BABY_NAME)
+    baby_name = store.baby_name
 
     async_add_entities(
         [
@@ -107,11 +105,7 @@ class BabyDiaryCountSensor(SensorEntity):
         self._attr_name = name
         self._attr_unique_id = f"{store.entry.entry_id}_{key}"
         self._attr_icon = icon
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, store.entry.entry_id)},
-            "name": f"Baby Diary {baby_name}",
-            "manufacturer": "Baby Diary",
-        }
+        self._attr_device_info = store.device_info
 
     @property
     def native_value(self) -> int:
@@ -129,4 +123,3 @@ class BabyDiaryCountSensor(SensorEntity):
     @callback
     def _async_handle_update(self) -> None:
         self.async_write_ha_state()
-

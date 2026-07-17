@@ -12,10 +12,15 @@ log_diaper_change:
             - xixi
             - coco
             - ambos
-    entry_id:
-      name: Entry ID
-      description: Optional Baby Diary config entry ID. Only needed when tracking multiple babies.
+    baby_name:
+      name: Baby name
+      description: Optional Baby Diary baby name or slug. Only needed when tracking multiple babies.
       required: false
       selector:
         text:
-
+    entry_id:
+      name: Entry ID
+      description: Optional Baby Diary config entry ID. Baby name is preferred for dashboards and automations.
+      required: false
+      selector:
+        text:

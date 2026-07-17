@@ -11,8 +11,11 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_track_time_change
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
+from homeassistant.util import slugify
 
 from .const import (
+    CONF_BABY_NAME,
+    DEFAULT_BABY_NAME,
     DIAPER_AMBOS,
     DIAPER_COCO,
     DIAPER_XIXI,
@@ -108,6 +111,25 @@ class BabyDiaryStore:
         """Return this store's update signal."""
         return f"{SIGNAL_UPDATED}_{self.entry.entry_id}"
 
+    @property
+    def baby_name(self) -> str:
+        """Return the baby name for this store."""
+        return str(self.entry.data.get(CONF_BABY_NAME, DEFAULT_BABY_NAME))
+
+    @property
+    def baby_slug(self) -> str:
+        """Return the normalized baby slug."""
+        return slugify(self.baby_name)
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """Return the shared Baby Diary device info."""
+        return {
+            "identifiers": {(DOMAIN, self.entry.entry_id)},
+            "name": f"Baby Diary {self.baby_name}",
+            "manufacturer": "Baby Diary",
+        }
+
     @callback
     def _handle_midnight(self, _now: Any) -> None:
         """Schedule reset after midnight."""
@@ -147,4 +169,3 @@ class BabyDiaryStore:
     @staticmethod
     def _empty_counts() -> dict[str, int]:
         return {metric: 0 for metric in METRICS}
-

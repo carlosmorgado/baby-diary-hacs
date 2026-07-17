@@ -6,7 +6,7 @@ from homeassistant.const import Platform
 
 DOMAIN = "baby_diary"
 NAME = "Baby Diary"
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 
 CONF_BABY_NAME = "baby_name"
 DEFAULT_BABY_NAME = "Goncalo"
@@ -25,11 +25,11 @@ METRIC_COCO = "coco"
 METRICS = (METRIC_DIAPERS, METRIC_XIXI, METRIC_COCO)
 
 DATA_STORES = "stores"
+DATA_STORE_SLUGS = "store_slugs"
 DATA_FRONTEND_REGISTERED = "frontend_registered"
 
 SERVICE_LOG_DIAPER_CHANGE = "log_diaper_change"
 
 SIGNAL_UPDATED = f"{DOMAIN}_updated"
 
-PLATFORMS = [Platform.SENSOR]
-
+PLATFORMS = [Platform.BUTTON, Platform.SENSOR]

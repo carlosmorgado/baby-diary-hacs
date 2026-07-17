@@ -59,7 +59,7 @@ window.customIconsets = window.customIconsets || {};
 window.customIconsets.baby = getIcon;
 
 window.babyDiaryHacs = Object.freeze({
-  version: "0.1.0",
+  version: "0.3.0",
   iconPrefix: "baby",
   colors: COLORS,
   icons: Object.freeze(Object.keys(ICONS))
@@ -201,6 +201,7 @@ class BabyDiaryDiaperCard extends HTMLElement {
 
   _button(name, icon, color, type, service) {
     const data = {
+      baby_name: this._config.baby,
       type
     };
 

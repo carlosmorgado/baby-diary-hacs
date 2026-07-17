@@ -7,6 +7,7 @@ It includes:
 - A YAML-free Baby Diary integration.
 - A `baby_diary.log_diaper_change` action for diaper logging.
 - Daily and total diaper sensors for Fraldas, Xixis, and Cocos.
+- Per-baby log buttons for Xixi, Coco, and Ambos.
 - A reusable `custom:baby-diary-diaper-card` dashboard card.
 - Icons for app / diary, diaper / fralda, pee / xixi, poo / coco, both / ambos, and feeding / mamada.
 
@@ -31,16 +32,20 @@ The integration creates these entities for a baby named `Goncalo`:
 - `sensor.daily_fraldas_goncalo_counter`
 - `sensor.daily_xixis_goncalo_counter`
 - `sensor.daily_cocos_goncalo_counter`
+- `button.log_xixi_goncalo`
+- `button.log_coco_goncalo`
+- `button.log_ambos_goncalo`
 
 It also registers:
 
 ```yaml
 action: baby_diary.log_diaper_change
 data:
+  baby_name: Goncalo
   type: xixi
 ```
 
-`type` can be `xixi`, `coco`, or `ambos`. `ambos` increments xixi and coco, but only one diaper.
+`type` can be `xixi`, `coco`, or `ambos`. `ambos` increments xixi and coco, but only one diaper. If you only have one baby configured, `baby_name` is optional; if you track more than one, pass the baby name or slug.
 
 ## Dashboard card
 
@@ -64,7 +69,7 @@ entities:
   coco: sensor.daily_cocos_goncalo_counter
 ```
 
-If you add multiple Baby Diary entries, also set `entry_id` on the card so button taps know which baby to update.
+If you add multiple Baby Diary entries, set `baby` to the same baby name or slug used by the integration entry. The card sends it to the integration automatically.
 
 ## Icons
 

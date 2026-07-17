@@ -11,7 +11,9 @@
     },
     "abort": {
       "already_configured": "This baby is already configured."
+    },
+    "error": {
+      "required": "Enter a baby name."
     }
   }
 }
-

@@ -12,16 +12,20 @@ For a baby named `Goncalo`, the integration creates:
 - `sensor.daily_fraldas_goncalo_counter`
 - `sensor.daily_xixis_goncalo_counter`
 - `sensor.daily_cocos_goncalo_counter`
+- `button.log_xixi_goncalo`
+- `button.log_coco_goncalo`
+- `button.log_ambos_goncalo`
 
 It also creates the action:
 
 ```yaml
 action: baby_diary.log_diaper_change
 data:
+  baby_name: Goncalo
   type: xixi
 ```
 
-`type` can be `xixi`, `coco`, or `ambos`.
+`type` can be `xixi`, `coco`, or `ambos`. `baby_name` is optional when only one Baby Diary entry exists.
 
 The old package example is still available at:
 

@@ -13,11 +13,14 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.util import slugify
 
 from .const import (
+    CONF_BABY_NAME,
     ATTR_ENTRY_ID,
     ATTR_TYPE,
     DATA_FRONTEND_REGISTERED,
+    DATA_STORE_SLUGS,
     DATA_STORES,
     DIAPER_TYPES,
     DOMAIN,
@@ -34,6 +37,7 @@ FRONTEND_URL = f"/{DOMAIN}/baby-diary-hacs.js"
 LOG_DIAPER_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_TYPE): vol.In(DIAPER_TYPES),
+        vol.Optional(CONF_BABY_NAME): str,
         vol.Optional(ATTR_ENTRY_ID): str,
     }
 )
@@ -41,7 +45,7 @@ LOG_DIAPER_SCHEMA = vol.Schema(
 
 async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
     """Set up Baby Diary."""
-    hass.data.setdefault(DOMAIN, {DATA_STORES: {}})
+    _ensure_domain_data(hass)
 
     async def handle_log_diaper_change(call: ServiceCall) -> None:
         store = _get_store_for_service(hass, call)
@@ -59,7 +63,7 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Baby Diary from a config entry."""
-    hass.data.setdefault(DOMAIN, {DATA_STORES: {}})
+    _ensure_domain_data(hass)
 
     await _async_register_frontend(hass)
 
@@ -68,6 +72,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     store.async_start()
 
     hass.data[DOMAIN][DATA_STORES][entry.entry_id] = store
+    hass.data[DOMAIN][DATA_STORE_SLUGS][store.baby_slug] = entry.entry_id
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
@@ -83,6 +88,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     if store:
         store.async_stop()
+        hass.data[DOMAIN][DATA_STORE_SLUGS].pop(store.baby_slug, None)
 
     if not hass.data[DOMAIN][DATA_STORES]:
         _async_remove_frontend(hass)
@@ -94,6 +100,12 @@ async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload Baby Diary."""
     await async_unload_entry(hass, entry)
     await async_setup_entry(hass, entry)
+
+
+def _ensure_domain_data(hass: HomeAssistant) -> None:
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN].setdefault(DATA_STORES, {})
+    hass.data[DOMAIN].setdefault(DATA_STORE_SLUGS, {})
 
 
 async def _async_register_frontend(hass: HomeAssistant) -> None:
@@ -122,12 +134,20 @@ def _get_store_for_service(
     hass: HomeAssistant, call: ServiceCall
 ) -> BabyDiaryStore:
     stores: dict[str, BabyDiaryStore] = hass.data.get(DOMAIN, {}).get(DATA_STORES, {})
+    store_slugs: dict[str, str] = hass.data.get(DOMAIN, {}).get(DATA_STORE_SLUGS, {})
     entry_id = call.data.get(ATTR_ENTRY_ID)
+    baby_name = call.data.get(CONF_BABY_NAME)
 
     if entry_id:
         if entry_id not in stores:
             raise HomeAssistantError(f"Baby Diary entry was not found: {entry_id}")
         return stores[entry_id]
+
+    if baby_name:
+        baby_slug = slugify(baby_name)
+        if baby_slug not in store_slugs:
+            raise HomeAssistantError(f"Baby Diary baby was not found: {baby_name}")
+        return stores[store_slugs[baby_slug]]
 
     if len(stores) == 1:
         return next(iter(stores.values()))
@@ -136,6 +156,6 @@ def _get_store_for_service(
         raise HomeAssistantError("Set up Baby Diary before logging a diaper change.")
 
     raise HomeAssistantError(
-        "Multiple Baby Diary entries exist; pass entry_id to log_diaper_change."
+        "Multiple Baby Diary entries exist; pass baby_name or entry_id to "
+        "log_diaper_change."
     )
-

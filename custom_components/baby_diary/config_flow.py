@@ -21,14 +21,19 @@ class BabyDiaryConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.ConfigFlowResult:
         """Handle the initial step."""
+        errors: dict[str, str] = {}
+
         if user_input is not None:
             baby_name = user_input[CONF_BABY_NAME].strip()
-            await self.async_set_unique_id(slugify(baby_name))
-            self._abort_if_unique_id_configured()
-            return self.async_create_entry(
-                title=baby_name,
-                data={CONF_BABY_NAME: baby_name},
-            )
+            if baby_name:
+                await self.async_set_unique_id(slugify(baby_name))
+                self._abort_if_unique_id_configured()
+                return self.async_create_entry(
+                    title=baby_name,
+                    data={CONF_BABY_NAME: baby_name},
+                )
+
+            errors[CONF_BABY_NAME] = "required"
 
         return self.async_show_form(
             step_id="user",
@@ -39,5 +44,5 @@ class BabyDiaryConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     ): str,
                 }
             ),
+            errors=errors,
         )
-
