@@ -59,7 +59,7 @@ window.customIconsets = window.customIconsets || {};
 window.customIconsets.baby = getIcon;
 
 window.babyDiaryHacs = Object.freeze({
-  version: "0.3.5",
+  version: "0.3.6",
   iconPrefix: "baby",
   colors: COLORS,
   icons: Object.freeze(Object.keys(ICONS))
@@ -243,6 +243,8 @@ class BabyDiaryDiaperCard extends HTMLElement {
 
     return {
       type: "grid",
+      columns: 1,
+      square: false,
       cards: [
         {
           type: "tile",
@@ -254,41 +256,44 @@ class BabyDiaryDiaperCard extends HTMLElement {
           hide_state: false,
           vertical: false,
           features: [{ type: "trend-graph" }],
-          features_position: "bottom",
-          grid_options: { columns: 12, rows: 2 }
+          features_position: "bottom"
         },
         {
-          type: "tile",
-          entity: entities.xixi,
-          name: this._config.xixi_name || "Xixis",
-          icon: this._config.xixi_icon || "baby:xixi",
-          color: this._config.xixi_color || "yellow",
-          vertical: false,
-          features: [{ type: "trend-graph" }],
-          features_position: "bottom",
-          grid_options: { columns: 6, rows: 2 }
-        },
-        {
-          type: "tile",
-          entity: entities.coco,
-          name: this._config.coco_name || "Cocós",
-          icon: this._config.coco_icon || "baby:coco",
-          color: this._config.coco_color || "brown",
-          vertical: false,
-          features: [{ type: "trend-graph" }],
-          features_position: "bottom",
-          grid_options: { columns: 6, rows: 2 }
+          type: "grid",
+          columns: 2,
+          square: false,
+          cards: [
+            {
+              type: "tile",
+              entity: entities.xixi,
+              name: this._config.xixi_name || "Xixis",
+              icon: this._config.xixi_icon || "baby:xixi",
+              color: this._config.xixi_color || "yellow",
+              vertical: false,
+              features: [{ type: "trend-graph" }],
+              features_position: "bottom"
+            },
+            {
+              type: "tile",
+              entity: entities.coco,
+              name: this._config.coco_name || "Cocós",
+              icon: this._config.coco_icon || "baby:coco",
+              color: this._config.coco_color || "brown",
+              vertical: false,
+              features: [{ type: "trend-graph" }],
+              features_position: "bottom"
+            }
+          ]
         },
         {
           type: "grid",
           columns: 3,
-          square: true,
+          square: false,
           cards: [
             this._button("Xixi", "baby:xixi", "yellow", "xixi", service),
             this._button("Cocó", "baby:coco", "brown", "coco", service),
             this._button("Ambos", "baby:ambos", "purple", "ambos", service)
-          ],
-          grid_options: { columns: 12, rows: 2 }
+          ]
         }
       ],
       column_span: this._config.column_span || 1,
@@ -384,8 +389,7 @@ class BabyDiaryDiaperCard extends HTMLElement {
         perform_action: service,
         data
       },
-      color,
-      grid_options: { columns: 4, rows: 2 }
+      color
     };
   }
 

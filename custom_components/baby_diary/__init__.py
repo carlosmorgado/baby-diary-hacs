@@ -42,6 +42,7 @@ LEGACY_FRONTEND_MODULE_URLS = (
     f"{FRONTEND_URL}?v=0.3.2",
     f"{FRONTEND_URL}?v=0.3.3",
     f"{FRONTEND_URL}?v=0.3.4",
+    f"{FRONTEND_URL}?v=0.3.5",
 )
 
 LOG_DIAPER_SCHEMA = vol.Schema(

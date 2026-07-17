@@ -78,7 +78,7 @@ entry_id: 01J2EXAMPLEENTRYID
 
 ## What The Card Generates
 
-The custom card wraps native Home Assistant `tile`, `grid`, and `button` cards. The diaper tile spans the full card width, xixi and coco sit side by side, and the three logging buttons sit in a square action row. The wrapper resolves Baby Diary's generated entity IDs before passing them into the native cards, which avoids broken `Entity not found` tiles when Home Assistant creates longer entity IDs.
+The custom card wraps native Home Assistant `tile`, `grid`, and `button` cards. It uses nested grids so the diaper tile spans the full card width, xixi and coco sit side by side, and the three logging buttons share the full card width. The wrapper resolves Baby Diary's generated entity IDs before passing them into the native cards, which avoids broken `Entity not found` tiles when Home Assistant creates longer entity IDs.
 
 ## Entity Not Found
 
