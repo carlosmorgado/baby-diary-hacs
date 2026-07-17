@@ -4,7 +4,6 @@ Baby Diary includes a custom card:
 
 ```yaml
 type: custom:baby-diary-diaper-card
-baby: goncalo
 ```
 
 The card builds a Home Assistant grid with:
@@ -19,10 +18,13 @@ No manual dashboard resource is needed. The integration registers the frontend m
 
 ## Basic Example
 
+When you have one Baby Diary baby configured, this is enough:
+
 ```yaml
 type: custom:baby-diary-diaper-card
-baby: goncalo
 ```
+
+The card auto-detects the generated daily diaper entities.
 
 ## Multiple Babies
 
@@ -40,6 +42,8 @@ sensor.daily_fraldas_maria_counter
 sensor.daily_xixis_maria_counter
 sensor.daily_cocos_maria_counter
 ```
+
+If the generated entity IDs were renamed, use entity overrides.
 
 ## Entity Overrides
 
@@ -104,3 +108,16 @@ background:
 ## What The Card Generates
 
 The custom card is a small wrapper around native dashboard cards. It creates a built-in `grid` card containing built-in `tile`, `button`, and trend graph features. This keeps the dashboard easy to customize and avoids maintaining a large custom frontend UI.
+
+## Entity Not Found
+
+If the card cannot find the daily entities, it shows a setup message instead of rendering broken entity cards.
+
+Check that:
+
+- Baby Diary is installed through HACS.
+- Home Assistant was restarted after install or update.
+- A Baby Diary baby exists under **Settings > Devices & services > Baby Diary**.
+- The card has the right `baby` value if you track more than one baby.
+
+For renamed entities, use the `entities` override shown above.

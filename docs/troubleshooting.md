@@ -35,7 +35,7 @@ If icons still do not show, restart Home Assistant and hard refresh the browser.
 
 Home Assistant can change entity IDs when names collide or when an entity was renamed. Check **Settings > Devices & services > Entities** and search for the baby name.
 
-If the dashboard card cannot find the generated entity IDs, pass the entities explicitly:
+The dashboard card auto-detects entities when exactly one Baby Diary baby exists. If it still cannot find the generated entity IDs, pass the entities explicitly:
 
 ```yaml
 type: custom:baby-diary-diaper-card
@@ -45,6 +45,17 @@ entities:
   xixi: sensor.daily_xixis_goncalo_counter
   coco: sensor.daily_cocos_goncalo_counter
 ```
+
+## Dashboard Shows Entity Not Found
+
+Update to Baby Diary HACS `0.3.2` or newer. Older versions could render native Home Assistant `Entity not found` cards when the baby name or entity IDs did not match.
+
+After updating:
+
+1. Restart Home Assistant.
+2. Confirm **Settings > Devices & services > Baby Diary** has one configured baby.
+3. If you have more than one baby, set `baby` in the card YAML.
+4. If the entities were renamed, use explicit `entities` overrides.
 
 ## Service Call Fails With Multiple Babies
 

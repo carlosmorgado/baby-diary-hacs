@@ -74,10 +74,11 @@ Add this card to a dashboard:
 
 ```yaml
 type: custom:baby-diary-diaper-card
-baby: goncalo
 ```
 
 The card renders the daily diaper, xixi, and coco totals with trend graphs plus quick buttons for Xixi, Coco, and Ambos.
+
+When only one Baby Diary baby exists, the card can auto-detect the entities. If you track more than one baby, pass `baby`.
 
 See [docs/dashboard-card.md](docs/dashboard-card.md) for all card options, custom entity overrides, and examples.
 

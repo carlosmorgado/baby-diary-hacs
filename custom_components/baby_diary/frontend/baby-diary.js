@@ -59,7 +59,7 @@ window.customIconsets = window.customIconsets || {};
 window.customIconsets.baby = getIcon;
 
 window.babyDiaryHacs = Object.freeze({
-  version: "0.3.1",
+  version: "0.3.2",
   iconPrefix: "baby",
   colors: COLORS,
   icons: Object.freeze(Object.keys(ICONS))
@@ -74,7 +74,11 @@ const slugify = (value) =>
     .replace(/^_+|_+$/g, "");
 
 const diaperEntitiesForBaby = (baby) => {
-  const slug = slugify(baby || "goncalo");
+  const slug = slugify(baby || "");
+
+  if (!slug) {
+    return {};
+  }
 
   return {
     diapers: `sensor.daily_fraldas_${slug}_counter`,
@@ -83,19 +87,93 @@ const diaperEntitiesForBaby = (baby) => {
   };
 };
 
+const DAILY_SENSOR_MATCHERS = Object.freeze({
+  diapers: {
+    label: "Fraldas",
+    icon: "baby:diaper",
+    tokens: ["fraldas", "diapers"]
+  },
+  xixi: {
+    label: "Xixi",
+    icon: "baby:xixi",
+    tokens: ["xixis", "xixi"]
+  },
+  coco: {
+    label: "Coco",
+    icon: "baby:coco",
+    tokens: ["cocos", "coco"]
+  }
+});
+
+const entityExists = (hass, entityId) => Boolean(entityId && hass?.states?.[entityId]);
+
+const stateMatchesDailySensor = (entityId, state, matcher) => {
+  const friendlyName = slugify(state?.attributes?.friendly_name || "");
+  const normalizedEntityId = slugify(entityId);
+  const hasDaily = friendlyName.includes("daily") || normalizedEntityId.includes("daily");
+  const hasMetric = matcher.tokens.some(
+    (token) => friendlyName.includes(token) || normalizedEntityId.includes(token)
+  );
+
+  return (
+    entityId.startsWith("sensor.") &&
+    state?.attributes?.icon === matcher.icon &&
+    hasDaily &&
+    hasMetric
+  );
+};
+
+const findDailyEntity = (hass, metric, baby) => {
+  const matcher = DAILY_SENSOR_MATCHERS[metric];
+  const babySlug = slugify(baby || "");
+
+  if (!hass?.states || !matcher) {
+    return undefined;
+  }
+
+  const candidates = Object.entries(hass.states)
+    .filter(([entityId, state]) => stateMatchesDailySensor(entityId, state, matcher))
+    .map(([entityId, state]) => ({
+      entityId,
+      searchText: `${slugify(entityId)} ${slugify(state.attributes?.friendly_name || "")}`
+    }));
+
+  const babyCandidates = babySlug
+    ? candidates.filter((candidate) => candidate.searchText.includes(babySlug))
+    : candidates;
+  const matches = babyCandidates.length > 0 ? babyCandidates : candidates;
+
+  return matches.length === 1 ? matches[0].entityId : undefined;
+};
+
 class BabyDiaryDiaperCard extends HTMLElement {
   setConfig(config) {
     this._config = {
-      baby: "goncalo",
       service: "baby_diary.log_diaper_change",
       ...config
     };
 
-    this._renderCard();
+    this._lastRenderSignature = undefined;
+
+    if (this._hass) {
+      this._renderCard();
+    }
   }
 
   set hass(hass) {
     this._hass = hass;
+
+    if (!this._config) {
+      return;
+    }
+
+    const signature = this._getRenderSignature();
+
+    if (!this._card || signature !== this._lastRenderSignature) {
+      this._lastRenderSignature = signature;
+      this._renderCard();
+      return;
+    }
 
     if (this._card) {
       this._card.hass = hass;
@@ -138,14 +216,19 @@ class BabyDiaryDiaperCard extends HTMLElement {
   }
 
   _buildCardConfig() {
-    const entities = {
-      ...diaperEntitiesForBaby(this._config.baby),
-      ...(this._config.entities || {})
-    };
+    const resolved = this._resolveDiaperEntities();
+
+    if (resolved.missing.length > 0) {
+      return this._buildMissingEntitiesCard(resolved);
+    }
+
+    const entities = resolved.entities;
     const service = this._config.service || "baby_diary.log_diaper_change";
 
     return {
       type: "grid",
+      columns: 1,
+      square: false,
       cards: [
         {
           type: "tile",
@@ -186,7 +269,7 @@ class BabyDiaryDiaperCard extends HTMLElement {
           square: false,
           cards: [
             this._button("Xixi", "baby:xixi", "yellow", "xixi", service),
-            this._button("Coco", "baby:coco", "brown", "coco", service),
+            this._button("Cocó", "baby:coco", "brown", "coco", service),
             this._button("Ambos", "baby:ambos", "purple", "ambos", service)
           ]
         }
@@ -199,11 +282,71 @@ class BabyDiaryDiaperCard extends HTMLElement {
     };
   }
 
-  _button(name, icon, color, type, service) {
-    const data = {
-      baby_name: this._config.baby,
-      type
+  _resolveDiaperEntities() {
+    const configuredEntities = this._config.entities || {};
+    const expectedEntities = diaperEntitiesForBaby(this._config.baby);
+    const entities = {};
+    const missing = [];
+
+    for (const metric of Object.keys(DAILY_SENSOR_MATCHERS)) {
+      entities[metric] =
+        configuredEntities[metric] ||
+        expectedEntities[metric] ||
+        findDailyEntity(this._hass, metric, this._config.baby);
+
+      if (!entityExists(this._hass, entities[metric])) {
+        missing.push({
+          metric,
+          label: DAILY_SENSOR_MATCHERS[metric].label,
+          entityId: entities[metric]
+        });
+      }
+    }
+
+    return { entities, missing };
+  }
+
+  _buildMissingEntitiesCard(resolved) {
+    const configuredBaby = this._config.baby
+      ? `The card is configured for \`${this._config.baby}\`.`
+      : "The card will auto-detect entities when exactly one Baby Diary baby exists.";
+    const missing = resolved.missing
+      .map((item) => `- ${item.label}${item.entityId ? `: \`${item.entityId}\`` : ""}`)
+      .join("\n");
+
+    return {
+      type: "markdown",
+      content: [
+        "### Baby Diary",
+        "",
+        "Daily diaper entities were not found yet.",
+        "",
+        configuredBaby,
+        "",
+        "Check that **Settings > Devices & services > Baby Diary** has a configured baby and restart Home Assistant after installing or updating from HACS.",
+        "",
+        "Missing:",
+        missing
+      ].join("\n")
     };
+  }
+
+  _getRenderSignature() {
+    const resolved = this._resolveDiaperEntities();
+
+    return JSON.stringify({
+      baby: this._config?.baby || "",
+      entities: resolved.entities,
+      missing: resolved.missing.map((item) => item.metric)
+    });
+  }
+
+  _button(name, icon, color, type, service) {
+    const data = { type };
+
+    if (this._config.baby) {
+      data.baby_name = this._config.baby;
+    }
 
     if (this._config.entry_id) {
       data.entry_id = this._config.entry_id;
@@ -226,8 +369,7 @@ class BabyDiaryDiaperCard extends HTMLElement {
 
   static getStubConfig() {
     return {
-      type: "custom:baby-diary-diaper-card",
-      baby: "goncalo"
+      type: "custom:baby-diary-diaper-card"
     };
   }
 

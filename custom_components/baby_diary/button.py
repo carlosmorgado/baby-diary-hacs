@@ -28,7 +28,7 @@ async def async_setup_entry(
     async_add_entities(
         [
             BabyDiaryLogButton(store, DIAPER_XIXI, "Log Xixi", "baby:xixi"),
-            BabyDiaryLogButton(store, DIAPER_COCO, "Log Coco", "baby:coco"),
+            BabyDiaryLogButton(store, DIAPER_COCO, "Log Cocó", "baby:coco"),
             BabyDiaryLogButton(store, DIAPER_AMBOS, "Log Ambos", "baby:ambos"),
         ]
     )
