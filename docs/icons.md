@@ -29,5 +29,5 @@ This package keeps the Baby Diary icon language in one place for Home Assistant.
 
 Home Assistant iconsets are monochrome by design. The custom icons use the current Home Assistant icon color.
 
-Use the SVG files in `dist/assets` when a dashboard needs the colored app artwork. After HACS installs the package, the assets can be referenced through `/hacsfiles/baby-diary-hacs/assets/` or `/local/community/baby-diary-hacs/assets/`.
+The Baby Diary integration automatically loads the iconset frontend module. Use the SVG files in `dist/assets` when a dashboard needs the colored app artwork.
 
