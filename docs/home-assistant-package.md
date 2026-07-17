@@ -4,6 +4,8 @@
 
 It creates helper buttons with Baby Diary icons and a template sensor that exposes the color palette as attributes.
 
+This package file is optional. The iconset itself does not need YAML in the normal HACS Dashboard install flow, because HACS should add the frontend resource automatically.
+
 Example `configuration.yaml` setup:
 
 ```yaml
@@ -17,11 +19,17 @@ Then copy the package file to:
 /config/packages/baby_diary_icons.yaml
 ```
 
-The iconset itself still needs to be loaded through the frontend:
+If the icons do not load after installing through HACS, verify that **Settings > Dashboards > Resources** contains:
+
+```text
+/hacsfiles/baby-diary-hacs/baby-diary-hacs.js
+```
+
+As a fallback, you can load the iconset module through `configuration.yaml`:
 
 ```yaml
 frontend:
   extra_module_url:
-    - /local/community/baby-diary-hacs/baby-diary-hacs.js
+    - /hacsfiles/baby-diary-hacs/baby-diary-hacs.js
 ```
 

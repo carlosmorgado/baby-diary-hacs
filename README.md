@@ -20,20 +20,32 @@ Control icons such as edit, delete, plus, theme, and navigation are intentionall
 3. Install **Baby Diary HACS**.
 4. Restart Home Assistant or reload frontend resources.
 
-Add the iconset module to `configuration.yaml`:
+That is enough for the normal HACS flow. HACS should add the dashboard resource automatically, and the icons can then be used as `baby:xixi`, `baby:coco`, `baby:mamada`, and so on.
 
-```yaml
-frontend:
-  extra_module_url:
-    - /local/community/baby-diary-hacs/baby-diary-hacs.js
+To verify it, go to **Settings > Dashboards > Resources** and look for a JavaScript module like:
+
+```text
+/hacsfiles/baby-diary-hacs/baby-diary-hacs.js
 ```
 
-Some HACS installations expose frontend resources through `/hacsfiles` instead:
+### Fallback manual setup
+
+Only add this manually if the icons do not load after installing through HACS.
+
+If you manage frontend modules from `configuration.yaml`, add:
 
 ```yaml
 frontend:
   extra_module_url:
     - /hacsfiles/baby-diary-hacs/baby-diary-hacs.js
+```
+
+If `/hacsfiles` is not available in your installation, use the direct local path:
+
+```yaml
+frontend:
+  extra_module_url:
+    - /local/community/baby-diary-hacs/baby-diary-hacs.js
 ```
 
 ## Icons
@@ -77,6 +89,12 @@ The palette is also exposed in the browser as `window.babyDiaryHacs.colors`.
 ## Assets
 
 Colored SVG assets are bundled under `dist/assets`. After HACS installs the package, these can be referenced from dashboards with paths such as:
+
+```text
+/hacsfiles/baby-diary-hacs/assets/xixi.svg
+```
+
+The direct local path also works:
 
 ```text
 /local/community/baby-diary-hacs/assets/xixi.svg
