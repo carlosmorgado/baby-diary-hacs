@@ -1,0 +1,19 @@
+Baby Diary Colors:
+  modes:
+    dark:
+      baby-diary-app: "#F8FAFC"
+      baby-diary-diaper: "#CBD5E1"
+      baby-diary-xixi: "#FACC15"
+      baby-diary-coco: "#92400E"
+      baby-diary-ambos: "#A855F7"
+      baby-diary-mamada: "#F9A8D4"
+      baby-diary-mint: "#6EE7B7"
+    light:
+      baby-diary-app: "#0F172A"
+      baby-diary-diaper: "#64748B"
+      baby-diary-xixi: "#CA8A04"
+      baby-diary-coco: "#92400E"
+      baby-diary-ambos: "#9333EA"
+      baby-diary-mamada: "#DB2777"
+      baby-diary-mint: "#059669"
+

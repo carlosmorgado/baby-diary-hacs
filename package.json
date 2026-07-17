@@ -1,0 +1,11 @@
+{
+  "name": "baby-diary-hacs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Home Assistant iconset and palette for Baby Diary.",
+  "scripts": {
+    "check": "node --check dist/baby-diary-hacs.js"
+  },
+  "license": "MIT"
+}
+
