@@ -1,10 +1,10 @@
-# Icons and colors
+# Icons And Colors
 
-This package keeps the Baby Diary icon language in one place for Home Assistant.
+The Baby Diary integration loads the `baby:` iconset automatically.
 
-## Icon names
+## Icons
 
-| Meaning | Primary icon | Aliases |
+| Meaning | Primary | Aliases |
 | --- | --- | --- |
 | App / diary | `baby:app` | `baby:diary`, `baby:baby-diary` |
 | Diaper / fralda | `baby:diaper` | `baby:fralda` |
@@ -13,21 +13,26 @@ This package keeps the Baby Diary icon language in one place for Home Assistant.
 | Both / ambos | `baby:ambos` | `baby:both` |
 | Feeding / mamada | `baby:mamada` | `baby:feeding` |
 
-## Palette
+## Colors
 
 | Token | Hex |
 | --- | --- |
-| `baby-diary-app` | `#F8FAFC` |
-| `baby-diary-diaper` | `#CBD5E1` |
-| `baby-diary-xixi` | `#FACC15` |
-| `baby-diary-coco` | `#92400E` |
-| `baby-diary-ambos` | `#A855F7` |
-| `baby-diary-mamada` | `#F9A8D4` |
-| `baby-diary-mint` | `#6EE7B7` |
+| `app` | `#F8FAFC` |
+| `diaper` | `#CBD5E1` |
+| `xixi` | `#FACC15` |
+| `coco` | `#92400E` |
+| `ambos` | `#A855F7` |
+| `mamada` | `#F9A8D4` |
+| `mint` | `#6EE7B7` |
 
-## Notes
+The palette is available in the browser as:
 
-Home Assistant iconsets are monochrome by design. The custom icons use the current Home Assistant icon color.
+```js
+window.babyDiaryHacs.colors
+```
 
-The Baby Diary integration automatically loads the iconset frontend module. Use the SVG files in `dist/assets` when a dashboard needs the colored app artwork.
+## Assets
 
+Colored SVG design assets live in [assets](../assets). They are for documentation, previews, and reuse outside the Home Assistant iconset.
+
+Home Assistant iconsets are monochrome by design, so `baby:` icons use the current Home Assistant icon color.

@@ -1,53 +1,39 @@
 # Baby Diary HACS
 
-Baby Diary HACS provides the Home Assistant integration, dashboard card, iconset, and color palette used by the Baby Diary app for baby care tracking.
+Baby Diary HACS is a Home Assistant custom integration for baby care tracking.
 
-It includes:
+Install it once per baby. Each Baby Diary entry creates the diaper sensors, daily sensors, quick log buttons, iconset, and dashboard card needed for that baby.
 
-- A YAML-free Baby Diary integration.
-- A `baby_diary.log_diaper_change` action for diaper logging.
-- Daily and total diaper sensors for Fraldas, Xixis, and Cocos.
-- Per-baby log buttons for Xixi, Coco, and Ambos.
-- A reusable `custom:baby-diary-diaper-card` dashboard card.
-- Icons for app / diary, diaper / fralda, pee / xixi, poo / coco, both / ambos, and feeding / mamada.
-
-Control icons such as edit, delete, plus, theme, and navigation are intentionally not included.
-
-## HACS install
+## Install
 
 1. In HACS, add this repository as a custom repository.
 2. Choose the **Integration** category.
 3. Install **Baby Diary HACS**.
 4. Restart Home Assistant.
-5. Go to **Settings > Devices & services > Add integration** and add **Baby Diary**.
-6. Enter the baby's name. Use `Goncalo` if you want entity IDs matching the examples below.
+5. Go to **Settings > Devices & services > Add integration**.
+6. Add **Baby Diary** and enter the baby's name.
 
-That is enough for the normal HACS flow. The integration registers the frontend module automatically, so no `configuration.yaml` or dashboard resource entry is required.
+No `configuration.yaml`, dashboard resources, template sensors, utility meters, or scripts are needed.
 
-The integration creates these entities for a baby named `Goncalo`:
+## Created Entities
 
-- `sensor.fraldas_goncalo_counter_sensor`
-- `sensor.xixis_goncalo_counter_sensor`
-- `sensor.cocos_goncalo_counter_sensor`
-- `sensor.daily_fraldas_goncalo_counter`
-- `sensor.daily_xixis_goncalo_counter`
-- `sensor.daily_cocos_goncalo_counter`
-- `button.log_xixi_goncalo`
-- `button.log_coco_goncalo`
-- `button.log_ambos_goncalo`
+For a baby named `Goncalo`, the integration creates:
 
-It also registers:
-
-```yaml
-action: baby_diary.log_diaper_change
-data:
-  baby_name: Goncalo
-  type: xixi
+```text
+sensor.fraldas_goncalo_counter_sensor
+sensor.xixis_goncalo_counter_sensor
+sensor.cocos_goncalo_counter_sensor
+sensor.daily_fraldas_goncalo_counter
+sensor.daily_xixis_goncalo_counter
+sensor.daily_cocos_goncalo_counter
+button.log_xixi_goncalo
+button.log_coco_goncalo
+button.log_ambos_goncalo
 ```
 
-`type` can be `xixi`, `coco`, or `ambos`. `ambos` increments xixi and coco, but only one diaper. If you only have one baby configured, `baby_name` is optional; if you track more than one, pass the baby name or slug.
+`ambos` increments xixi and coco, but only one diaper.
 
-## Dashboard card
+## Dashboard Card
 
 Add this card to a dashboard:
 
@@ -56,9 +42,9 @@ type: custom:baby-diary-diaper-card
 baby: goncalo
 ```
 
-For a baby named `Goncalo`, this expands to the same tile/button layout as the longer YAML version: daily Fraldas, Xixis, and Cocos tiles with trend graphs, plus quick buttons for Xixi, Coco, and Ambos.
+The card renders the daily diaper, xixi, and coco totals with trend graphs plus quick buttons for Xixi, Coco, and Ambos.
 
-You can override the generated entities:
+If your entity names differ, override them:
 
 ```yaml
 type: custom:baby-diary-diaper-card
@@ -69,11 +55,32 @@ entities:
   coco: sensor.daily_cocos_goncalo_counter
 ```
 
-If you add multiple Baby Diary entries, set `baby` to the same baby name or slug used by the integration entry. The card sends it to the integration automatically.
+For multiple babies, set `baby` to the same name or slug used by that Baby Diary integration entry.
 
-## Icons
+## Action
 
-The icon prefix is `baby`.
+The integration also exposes an action:
+
+```yaml
+action: baby_diary.log_diaper_change
+data:
+  baby_name: Goncalo
+  type: xixi
+```
+
+`type` can be `xixi`, `coco`, or `ambos`. `baby_name` is optional when only one Baby Diary entry exists.
+
+You can also use the generated buttons directly in automations or dashboards:
+
+```yaml
+action: button.press
+target:
+  entity_id: button.log_xixi_goncalo
+```
+
+## Icons And Colors
+
+The integration automatically loads the `baby:` iconset:
 
 ```yaml
 icon: baby:app
@@ -84,48 +91,17 @@ icon: baby:ambos
 icon: baby:mamada
 ```
 
-English and Portuguese aliases are available:
+The browser also receives the Baby Diary palette at `window.babyDiaryHacs.colors`.
 
-- `baby:diaper` and `baby:fralda`
-- `baby:xixi` and `baby:pee`
-- `baby:coco` and `baby:poo`
-- `baby:ambos` and `baby:both`
-- `baby:mamada` and `baby:feeding`
-- `baby:app`, `baby:diary`, and `baby:baby-diary`
+See [docs/icons.md](docs/icons.md) for the full icon, alias, color, and asset reference.
 
-## Colors
-
-The canonical Baby Diary colors are:
-
-| Token | Color |
-| --- | --- |
-| App | `#F8FAFC` |
-| Diaper | `#CBD5E1` |
-| Xixi | `#FACC15` |
-| Coco | `#92400E` |
-| Ambos | `#A855F7` |
-| Mamada | `#F9A8D4` |
-| Mint accent | `#6EE7B7` |
-
-The palette is also exposed in the browser as `window.babyDiaryHacs.colors`.
-
-## Assets
-
-Colored SVG assets are bundled under `dist/assets`. They are mainly kept for design reuse and manual dashboard artwork.
-
-If this repository is installed as a Dashboard resource, HACS paths look like:
+## Repository Layout
 
 ```text
-/hacsfiles/baby-diary-hacs/assets/xixi.svg
+custom_components/baby_diary/  Home Assistant integration runtime
+assets/                        Colored SVG design assets
+brand/                         HACS repository brand icon
+docs/                          Short reference docs
 ```
 
-The direct local path also works:
-
-```text
-/local/community/baby-diary-hacs/assets/xixi.svg
-```
-
-## Home Assistant package example
-
-The old YAML-style package example remains at `dist/packages/baby_diary_icons.yaml`, but it is no longer needed for normal use. Prefer the integration and the `custom:baby-diary-diaper-card`.
-
+The integration runtime, including the frontend card/iconset module, lives under `custom_components/baby_diary/`.
