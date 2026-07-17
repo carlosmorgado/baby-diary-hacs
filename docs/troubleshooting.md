@@ -48,7 +48,7 @@ entities:
 
 ## Dashboard Shows Entity Not Found
 
-Update to Baby Diary HACS `0.3.2` or newer. Older versions could render native Home Assistant `Entity not found` cards when the baby name or entity IDs did not match.
+Update to Baby Diary HACS `0.3.3` or newer. Older versions could render native Home Assistant `Entity not found` cards when the baby name or entity IDs did not match.
 
 After updating:
 

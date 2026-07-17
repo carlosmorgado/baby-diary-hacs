@@ -59,7 +59,7 @@ window.customIconsets = window.customIconsets || {};
 window.customIconsets.baby = getIcon;
 
 window.babyDiaryHacs = Object.freeze({
-  version: "0.3.2",
+  version: "0.3.3",
   iconPrefix: "baby",
   colors: COLORS,
   icons: Object.freeze(Object.keys(ICONS))
@@ -117,7 +117,6 @@ const stateMatchesDailySensor = (entityId, state, matcher) => {
 
   return (
     entityId.startsWith("sensor.") &&
-    state?.attributes?.icon === matcher.icon &&
     hasDaily &&
     hasMetric
   );
@@ -289,10 +288,14 @@ class BabyDiaryDiaperCard extends HTMLElement {
     const missing = [];
 
     for (const metric of Object.keys(DAILY_SENSOR_MATCHERS)) {
+      const configuredEntity = configuredEntities[metric];
+      const expectedEntity = expectedEntities[metric];
+      const discoveredEntity = findDailyEntity(this._hass, metric, this._config.baby);
+
       entities[metric] =
-        configuredEntities[metric] ||
-        expectedEntities[metric] ||
-        findDailyEntity(this._hass, metric, this._config.baby);
+        configuredEntity ||
+        (entityExists(this._hass, expectedEntity) ? expectedEntity : discoveredEntity) ||
+        expectedEntity;
 
       if (!entityExists(this._hass, entities[metric])) {
         missing.push({
