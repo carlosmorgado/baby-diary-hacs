@@ -6,12 +6,13 @@ Baby Diary includes a custom card:
 type: custom:baby-diary-diaper-card
 ```
 
-The card renders a compact Baby Diary panel with:
+The card builds a Home Assistant grid with:
 
 - daily diaper total
 - daily xixi total
 - daily coco total
-- fixed-size quick buttons for Xixi, Coco, and Ambos
+- native Home Assistant trend graphs
+- quick buttons for Xixi, Coco, and Ambos
 
 No manual dashboard resource is needed. The integration registers the frontend module when at least one Baby Diary config entry is loaded.
 
@@ -77,7 +78,7 @@ entry_id: 01J2EXAMPLEENTRYID
 
 ## What The Card Generates
 
-The custom card renders its own `ha-card` instead of nesting native Home Assistant `tile` and `button` cards. This avoids broken native `Entity not found` cards when Home Assistant generates longer entity IDs, and it keeps the three quick action buttons the same size on narrow dashboards.
+The custom card wraps native Home Assistant `tile`, `grid`, and `button` cards. The diaper tile spans the full card width, xixi and coco sit side by side, and the three logging buttons sit in a square action row. The wrapper resolves Baby Diary's generated entity IDs before passing them into the native cards, which avoids broken `Entity not found` tiles when Home Assistant creates longer entity IDs.
 
 ## Entity Not Found
 

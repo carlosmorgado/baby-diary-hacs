@@ -48,14 +48,17 @@ entities:
 
 ## Dashboard Shows Entity Not Found
 
-Update to Baby Diary HACS `0.3.4` or newer. Older versions could render native Home Assistant `Entity not found` cards when the baby name or entity IDs did not match.
+Update to Baby Diary HACS `0.3.5` or newer. Older versions could render native Home Assistant `Entity not found` cards when the baby name or entity IDs did not match.
 
 After updating:
 
 1. Restart Home Assistant.
-2. Confirm **Settings > Devices & services > Baby Diary** has one configured baby.
-3. If you have more than one baby, set `baby` in the card YAML.
-4. If the entities were renamed, use explicit `entities` overrides.
+2. Hard refresh the browser or fully close and reopen the Home Assistant app.
+3. Confirm **Settings > Devices & services > Baby Diary** has one configured baby.
+4. If you have more than one baby, set `baby` in the card YAML.
+5. If the entities were renamed, use explicit `entities` overrides.
+
+Version `0.3.5` also removes stale Baby Diary frontend module URLs from older releases. This matters because an older loaded module can define the custom card first and keep showing the old broken layout until Home Assistant and the browser are refreshed.
 
 ## Service Call Fails With Multiple Babies
 

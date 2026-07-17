@@ -76,7 +76,7 @@ Add this card to a dashboard:
 type: custom:baby-diary-diaper-card
 ```
 
-The card renders the daily diaper, xixi, and coco totals plus fixed-size quick buttons for Xixi, Coco, and Ambos.
+The card renders the daily diaper, xixi, and coco totals with native Home Assistant trend graphs plus quick buttons for Xixi, Coco, and Ambos.
 
 When only one Baby Diary baby exists, the card can auto-detect the entities. If you track more than one baby, pass `baby`.
 

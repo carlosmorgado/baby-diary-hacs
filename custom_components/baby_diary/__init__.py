@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
 from pathlib import Path
 import logging
 
@@ -35,6 +36,13 @@ _LOGGER = logging.getLogger(__name__)
 FRONTEND_FILE = Path(__file__).parent / "frontend" / "baby-diary.js"
 FRONTEND_URL = f"/{DOMAIN}/baby-diary.js"
 FRONTEND_MODULE_URL = f"{FRONTEND_URL}?v={VERSION}"
+LEGACY_FRONTEND_MODULE_URLS = (
+    FRONTEND_URL,
+    f"{FRONTEND_URL}?v=0.3.1",
+    f"{FRONTEND_URL}?v=0.3.2",
+    f"{FRONTEND_URL}?v=0.3.3",
+    f"{FRONTEND_URL}?v=0.3.4",
+)
 
 LOG_DIAPER_SCHEMA = vol.Schema(
     {
@@ -130,6 +138,8 @@ def _ensure_domain_data(hass: HomeAssistant) -> None:
 
 
 async def _async_register_frontend(hass: HomeAssistant) -> None:
+    _async_remove_frontend_urls(hass, LEGACY_FRONTEND_MODULE_URLS)
+
     if hass.data[DOMAIN].get(DATA_FRONTEND_REGISTERED):
         return
 
@@ -145,10 +155,16 @@ async def _async_register_frontend(hass: HomeAssistant) -> None:
 
 
 def _async_remove_frontend(hass: HomeAssistant) -> None:
-    if not hass.data[DOMAIN].pop(DATA_FRONTEND_REGISTERED, False):
-        return
+    hass.data[DOMAIN].pop(DATA_FRONTEND_REGISTERED, False)
+    _async_remove_frontend_urls(hass, (*LEGACY_FRONTEND_MODULE_URLS, FRONTEND_MODULE_URL))
 
-    remove_extra_js_url(hass, FRONTEND_MODULE_URL)
+
+def _async_remove_frontend_urls(
+    hass: HomeAssistant, frontend_urls: tuple[str, ...]
+) -> None:
+    for frontend_url in frontend_urls:
+        with suppress(KeyError, ValueError):
+            remove_extra_js_url(hass, frontend_url)
 
 
 def _get_store_for_service(
