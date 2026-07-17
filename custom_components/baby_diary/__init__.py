@@ -27,6 +27,7 @@ from .const import (
     DOMAIN,
     PLATFORMS,
     SERVICE_LOG_DIAPER_CHANGE,
+    SERVICE_TOGGLE_FEEDING,
     VERSION,
 )
 from .store import BabyDiaryStore
@@ -44,11 +45,19 @@ LEGACY_FRONTEND_MODULE_URLS = (
     f"{FRONTEND_URL}?v=0.3.4",
     f"{FRONTEND_URL}?v=0.3.5",
     f"{FRONTEND_URL}?v=0.3.6",
+    f"{FRONTEND_URL}?v=0.3.7",
 )
 
 LOG_DIAPER_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_TYPE): vol.In(DIAPER_TYPES),
+        vol.Optional(CONF_BABY_NAME): str,
+        vol.Optional(ATTR_ENTRY_ID): str,
+    }
+)
+
+ROUTE_TO_BABY_SCHEMA = vol.Schema(
+    {
         vol.Optional(CONF_BABY_NAME): str,
         vol.Optional(ATTR_ENTRY_ID): str,
     }
@@ -68,6 +77,17 @@ async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
         SERVICE_LOG_DIAPER_CHANGE,
         handle_log_diaper_change,
         schema=LOG_DIAPER_SCHEMA,
+    )
+
+    async def handle_toggle_feeding(call: ServiceCall) -> None:
+        store = _get_store_for_service(hass, call)
+        await store.async_toggle_feeding()
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_TOGGLE_FEEDING,
+        handle_toggle_feeding,
+        schema=ROUTE_TO_BABY_SCHEMA,
     )
 
     return True

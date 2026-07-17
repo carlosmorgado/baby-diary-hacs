@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Baby Diary",
-        "description": "Create counters and dashboard helpers for one baby.",
+        "description": "Create diaper and feeding helpers for one baby.",
         "data": {
           "baby_name": "Baby name"
         }

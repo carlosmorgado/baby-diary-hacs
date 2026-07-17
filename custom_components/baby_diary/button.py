@@ -30,6 +30,7 @@ async def async_setup_entry(
             BabyDiaryLogButton(store, DIAPER_XIXI, "Log Xixi", "baby:xixi"),
             BabyDiaryLogButton(store, DIAPER_COCO, "Log Cocó", "baby:coco"),
             BabyDiaryLogButton(store, DIAPER_AMBOS, "Log Ambos", "baby:ambos"),
+            BabyDiaryToggleFeedingButton(store),
         ]
     )
 
@@ -56,3 +57,20 @@ class BabyDiaryLogButton(ButtonEntity):
     async def async_press(self) -> None:
         """Log a diaper change."""
         await self._store.async_log_diaper_change(self._diaper_type)
+
+
+class BabyDiaryToggleFeedingButton(ButtonEntity):
+    """Button that starts or stops a feeding session."""
+
+    _attr_should_poll = False
+
+    def __init__(self, store: BabyDiaryStore) -> None:
+        self._store = store
+        self._attr_name = f"Toggle Mamada {store.baby_name}"
+        self._attr_unique_id = f"{store.entry.entry_id}_toggle_mamada"
+        self._attr_icon = "baby:mamada"
+        self._attr_device_info = store.device_info
+
+    async def async_press(self) -> None:
+        """Start or stop a feeding session."""
+        await self._store.async_toggle_feeding()

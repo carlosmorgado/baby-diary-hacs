@@ -8,9 +8,7 @@
 
 Baby Diary HACS is a Home Assistant custom integration for baby care tracking.
 
-Install it once per baby. Each Baby Diary entry creates diaper counters, daily diaper counters, quick log buttons, the Baby Diary iconset, and a ready-to-use dashboard card for that baby.
-
-The current integration tracks diapers. Feeding icons and colors are included so dashboards can already use the same Baby Diary visual language while feeding entities are added later.
+Install it once per baby. Each Baby Diary entry creates diaper and feeding entities, daily counters, quick action buttons, the Baby Diary iconset, and ready-to-use dashboard cards for that baby.
 
 ## Features
 
@@ -19,9 +17,12 @@ The current integration tracks diapers. Feeding icons and colors are included so
 - Diaper logging for `xixi`, `coco`, and `ambos`.
 - `ambos` increments xixi and coco, but still counts as one diaper.
 - Total and daily sensors.
+- Feeding sessions with one start/stop action.
+- Daily feeding count, duration, and session timeline attributes.
 - Daily reset at local Home Assistant midnight.
 - Quick log button entities for dashboards, automations, NFC tags, and voice helpers.
 - Custom dashboard card: `custom:baby-diary-diaper-card`.
+- Custom dashboard card: `custom:baby-diary-feeding-card`.
 - Custom iconset: `baby:`.
 - HACS-compatible repository layout and brand icons.
 
@@ -62,15 +63,20 @@ For a baby named `Goncalo`, Home Assistant will create entities similar to these
 | `sensor.baby_diary_goncalo_daily_fraldas_goncalo_counter` | Today's diaper total |
 | `sensor.baby_diary_goncalo_daily_xixis_goncalo_counter` | Today's xixi total |
 | `sensor.baby_diary_goncalo_daily_cocos_goncalo_counter` | Today's coco total |
+| `sensor.baby_diary_goncalo_daily_mamadas_goncalo_counter` | Today's feeding count |
+| `sensor.baby_diary_goncalo_current_mamada_goncalo_duration` | Current feeding duration |
+| `sensor.baby_diary_goncalo_daily_mamada_goncalo_duration` | Today's total feeding duration |
+| `sensor.baby_diary_goncalo_last_mamada_goncalo_duration` | Last completed feeding duration |
 | `button.log_xixi_goncalo` | Log one xixi diaper |
 | `button.log_coco_goncalo` | Log one coco diaper |
 | `button.log_ambos_goncalo` | Log one diaper with xixi and coco |
+| `button.toggle_mamada_goncalo` | Start or stop a feeding session |
 
 Entity IDs can vary if Home Assistant has to avoid a duplicate name or if you rename entities in the entity registry. The dashboard card tries to detect these generated IDs automatically.
 
 ## Dashboard Card
 
-Add this card to a dashboard:
+Add the diaper card to a dashboard:
 
 ```yaml
 type: custom:baby-diary-diaper-card
@@ -78,13 +84,21 @@ type: custom:baby-diary-diaper-card
 
 The card renders the daily diaper, xixi, and coco totals with native Home Assistant trend graphs plus quick buttons for Xixi, Coco, and Ambos.
 
+Add the feeding card to a dashboard:
+
+```yaml
+type: custom:baby-diary-feeding-card
+```
+
+The feeding card renders today's feeding count, total feeding duration, a session timeline, and one button that starts the feeding if none is active or stops the active feeding.
+
 When only one Baby Diary baby exists, the card can auto-detect the entities. If you track more than one baby, pass `baby`.
 
 See [docs/dashboard-card.md](docs/dashboard-card.md) for all card options, custom entity overrides, and examples.
 
 ## Action
 
-The integration exposes an action:
+The integration exposes diaper and feeding actions:
 
 ```yaml
 action: baby_diary.log_diaper_change
@@ -94,6 +108,14 @@ data:
 ```
 
 `type` can be `xixi`, `coco`, or `ambos`. `baby_name` is optional when only one Baby Diary entry exists.
+
+```yaml
+action: baby_diary.toggle_feeding
+data:
+  baby_name: Goncalo
+```
+
+`toggle_feeding` starts a feeding session when none is active and stops the active feeding session when one is already running.
 
 See [docs/services-and-automations.md](docs/services-and-automations.md) for automation and button examples.
 
@@ -135,6 +157,7 @@ The integration ships one frontend module at `custom_components/baby_diary/front
 That file is necessary because Home Assistant needs browser-side JavaScript to register:
 
 - `custom:baby-diary-diaper-card`
+- `custom:baby-diary-feeding-card`
 - the `baby:` custom iconset
 - `window.babyDiaryHacs.colors`
 
