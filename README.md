@@ -6,6 +6,8 @@ Install it once per baby. Each Baby Diary entry creates the diaper sensors, dail
 
 ## Install
 
+Quick link: [Open this repository in HACS](https://my.home-assistant.io/redirect/hacs_repository/?owner=carlosmorgado&repository=baby-diary-hacs&category=integration)
+
 1. In HACS, add this repository as a custom repository.
 2. Choose the **Integration** category.
 3. Install **Baby Diary HACS**.
