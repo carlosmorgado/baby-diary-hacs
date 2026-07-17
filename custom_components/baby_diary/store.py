@@ -89,6 +89,10 @@ class BabyDiaryStore:
         """Persist data."""
         await self._store.async_save(self._data)
 
+    async def async_remove(self) -> None:
+        """Remove persisted counter data."""
+        await self._store.async_remove()
+
     @callback
     def total(self, metric: str) -> int:
         """Return total count."""

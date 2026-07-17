@@ -44,6 +44,12 @@ Quick link: [Open this repository in HACS](https://my.home-assistant.io/redirect
 
 More details are available in [docs/installation.md](docs/installation.md).
 
+## Uninstall
+
+For a clean uninstall, remove each Baby Diary entry from **Settings > Devices & services** before uninstalling the package from HACS.
+
+The integration removes its persisted Baby Diary counter storage when a Baby Diary entry is deleted. Home Assistant recorder/history data may remain according to your recorder settings.
+
 ## Created Entities
 
 For a baby named `Goncalo`, Home Assistant will create entities similar to these:

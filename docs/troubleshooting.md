@@ -76,3 +76,11 @@ If Home Assistant was off at midnight, the store also checks the date when value
 Normal HACS updates should not reset counters. The data is stored by Home Assistant's storage helper under `.storage`.
 
 Removing Home Assistant storage files, deleting the config entry, or restoring an old backup can change the counters.
+
+## Uninstalled From HACS Before Removing The Integration Entry
+
+If the HACS package was removed first, Home Assistant may still have a Baby Diary config entry but no integration code to load it.
+
+Fix it by reinstalling the HACS package, restarting Home Assistant, deleting the Baby Diary entry from **Settings > Devices & services**, and then uninstalling the HACS package again.
+
+This order lets Home Assistant call Baby Diary's removal hook so the persisted counter storage can be cleaned up.

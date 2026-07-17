@@ -102,6 +102,25 @@ async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     await async_setup_entry(hass, entry)
 
 
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Remove a Baby Diary config entry."""
+    domain_data = hass.data.get(DOMAIN, {})
+    stores: dict[str, BabyDiaryStore] = domain_data.get(DATA_STORES, {})
+    store_slugs: dict[str, str] = domain_data.get(DATA_STORE_SLUGS, {})
+    store = stores.pop(entry.entry_id, None)
+
+    if store is None:
+        store = BabyDiaryStore(hass, entry)
+    else:
+        store.async_stop()
+        store_slugs.pop(store.baby_slug, None)
+
+    if not stores:
+        _async_remove_frontend(hass)
+
+    await store.async_remove()
+
+
 def _ensure_domain_data(hass: HomeAssistant) -> None:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN].setdefault(DATA_STORES, {})

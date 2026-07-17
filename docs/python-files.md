@@ -40,6 +40,7 @@ Important helper functions:
 | `async_setup` | Runs once for the integration and registers the service |
 | `async_setup_entry` | Runs for each configured baby |
 | `async_unload_entry` | Cleans up one configured baby |
+| `async_remove_entry` | Deletes persisted Baby Diary storage when a baby entry is removed |
 | `_async_register_frontend` | Serves and loads `frontend/baby-diary.js` |
 | `_get_store_for_service` | Finds the correct baby store from `entry_id`, `baby_name`, or the single configured entry |
 
@@ -82,6 +83,7 @@ It is responsible for:
 
 - loading persisted data with Home Assistant's `Store` helper
 - saving counts after every logged diaper
+- deleting persisted Baby Diary data when a config entry is removed
 - keeping lifetime totals
 - keeping daily totals
 - resetting daily totals after local midnight

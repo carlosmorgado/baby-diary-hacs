@@ -54,8 +54,25 @@ The counters are stored in Home Assistant's `.storage` directory and are not rep
 
 ## Removing
 
-1. Remove each Baby Diary entry from **Settings > Devices & services**.
-2. Remove the HACS integration.
-3. Restart Home Assistant if requested.
+Use this order when you want a clean uninstall:
 
-Removing the integration stops the entities and frontend card from loading. Home Assistant may keep historical recorder data according to your recorder settings.
+1. Go to **Settings > Devices & services**.
+2. Open **Baby Diary**.
+3. Delete each Baby Diary entry/baby.
+4. Go to **HACS**.
+5. Open **Baby Diary HACS** and uninstall it.
+6. Restart Home Assistant if requested.
+
+Deleting a Baby Diary entry removes its persisted Baby Diary counter storage. Home Assistant may still keep historical recorder/statistics data according to your recorder settings.
+
+## Reinstalling After Removing It From HACS
+
+If you removed the HACS package before deleting the Baby Diary integration entry:
+
+1. Install **Baby Diary HACS** again from HACS.
+2. Restart Home Assistant.
+3. Remove the Baby Diary entry from **Settings > Devices & services**.
+4. Uninstall **Baby Diary HACS** from HACS.
+5. Restart Home Assistant.
+
+That gives Home Assistant the integration code again long enough to cleanly unload and remove the config entry.
