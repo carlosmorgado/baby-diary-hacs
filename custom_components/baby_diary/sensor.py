@@ -86,7 +86,7 @@ async def async_setup_entry(
 class BabyDiaryCountSensor(SensorEntity):
     """Baby Diary count sensor."""
 
-    _attr_native_unit_of_measurement = "changes"
+    _attr_native_unit_of_measurement = "mudas"
     _attr_should_poll = False
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_suggested_display_precision = 0

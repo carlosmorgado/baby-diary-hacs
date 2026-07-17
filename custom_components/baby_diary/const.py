@@ -6,7 +6,7 @@ from homeassistant.const import Platform
 
 DOMAIN = "baby_diary"
 NAME = "Baby Diary"
-VERSION = "0.3.6"
+VERSION = "0.3.7"
 
 CONF_BABY_NAME = "baby_name"
 DEFAULT_BABY_NAME = "Goncalo"

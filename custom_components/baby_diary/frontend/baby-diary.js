@@ -59,7 +59,7 @@ window.customIconsets = window.customIconsets || {};
 window.customIconsets.baby = getIcon;
 
 window.babyDiaryHacs = Object.freeze({
-  version: "0.3.6",
+  version: "0.3.7",
   iconPrefix: "baby",
   colors: COLORS,
   icons: Object.freeze(Object.keys(ICONS))

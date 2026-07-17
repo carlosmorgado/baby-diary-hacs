@@ -52,6 +52,8 @@ Manual installs do not get HACS update notifications.
 
 The counters are stored in Home Assistant's `.storage` directory and are not replaced by normal integration updates.
 
+Backend changes, such as sensors, units, services, storage, or config flows, need a Home Assistant restart so Python code is loaded again. Frontend-only card/icon changes usually only need the HACS download plus a hard browser refresh, as long as Home Assistant is already serving the Baby Diary frontend module.
+
 ## Removing
 
 Use this order when you want a clean uninstall:
