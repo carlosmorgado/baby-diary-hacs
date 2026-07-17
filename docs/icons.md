@@ -43,7 +43,7 @@ Home Assistant iconsets are monochrome by design, so `baby:` icons use the curre
 
 ```yaml
 type: tile
-entity: sensor.daily_fraldas_goncalo_counter
+entity: sensor.baby_diary_goncalo_daily_fraldas_goncalo_counter
 name: Fraldas
 icon: baby:diaper
 color: white

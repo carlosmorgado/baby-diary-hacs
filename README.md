@@ -58,15 +58,15 @@ For a baby named `Goncalo`, Home Assistant will create entities similar to these
 | --- | --- |
 | `sensor.fraldas_goncalo_counter_sensor` | Lifetime diaper total |
 | `sensor.xixis_goncalo_counter_sensor` | Lifetime xixi total |
-| `sensor.cocos_goncalo_counter_sensor` | Lifetime coco total |
-| `sensor.daily_fraldas_goncalo_counter` | Today's diaper total |
-| `sensor.daily_xixis_goncalo_counter` | Today's xixi total |
-| `sensor.daily_cocos_goncalo_counter` | Today's coco total |
+| `sensor.baby_diary_goncalo_cocos_goncalo_counter_sensor` | Lifetime coco total |
+| `sensor.baby_diary_goncalo_daily_fraldas_goncalo_counter` | Today's diaper total |
+| `sensor.baby_diary_goncalo_daily_xixis_goncalo_counter` | Today's xixi total |
+| `sensor.baby_diary_goncalo_daily_cocos_goncalo_counter` | Today's coco total |
 | `button.log_xixi_goncalo` | Log one xixi diaper |
 | `button.log_coco_goncalo` | Log one coco diaper |
 | `button.log_ambos_goncalo` | Log one diaper with xixi and coco |
 
-Entity IDs can vary if Home Assistant has to avoid a duplicate name or if you rename entities in the entity registry.
+Entity IDs can vary if Home Assistant has to avoid a duplicate name or if you rename entities in the entity registry. The dashboard card tries to detect these generated IDs automatically.
 
 ## Dashboard Card
 
@@ -76,7 +76,7 @@ Add this card to a dashboard:
 type: custom:baby-diary-diaper-card
 ```
 
-The card renders the daily diaper, xixi, and coco totals with trend graphs plus quick buttons for Xixi, Coco, and Ambos.
+The card renders the daily diaper, xixi, and coco totals plus fixed-size quick buttons for Xixi, Coco, and Ambos.
 
 When only one Baby Diary baby exists, the card can auto-detect the entities. If you track more than one baby, pass `baby`.
 

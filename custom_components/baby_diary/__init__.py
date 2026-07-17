@@ -26,6 +26,7 @@ from .const import (
     DOMAIN,
     PLATFORMS,
     SERVICE_LOG_DIAPER_CHANGE,
+    VERSION,
 )
 from .store import BabyDiaryStore
 
@@ -33,6 +34,7 @@ _LOGGER = logging.getLogger(__name__)
 
 FRONTEND_FILE = Path(__file__).parent / "frontend" / "baby-diary.js"
 FRONTEND_URL = f"/{DOMAIN}/baby-diary.js"
+FRONTEND_MODULE_URL = f"{FRONTEND_URL}?v={VERSION}"
 
 LOG_DIAPER_SCHEMA = vol.Schema(
     {
@@ -138,7 +140,7 @@ async def _async_register_frontend(hass: HomeAssistant) -> None:
     await hass.http.async_register_static_paths(
         [StaticPathConfig(FRONTEND_URL, str(FRONTEND_FILE), False)]
     )
-    add_extra_js_url(hass, FRONTEND_URL)
+    add_extra_js_url(hass, FRONTEND_MODULE_URL)
     hass.data[DOMAIN][DATA_FRONTEND_REGISTERED] = True
 
 
@@ -146,7 +148,7 @@ def _async_remove_frontend(hass: HomeAssistant) -> None:
     if not hass.data[DOMAIN].pop(DATA_FRONTEND_REGISTERED, False):
         return
 
-    remove_extra_js_url(hass, FRONTEND_URL)
+    remove_extra_js_url(hass, FRONTEND_MODULE_URL)
 
 
 def _get_store_for_service(

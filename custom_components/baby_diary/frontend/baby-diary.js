@@ -59,7 +59,7 @@ window.customIconsets = window.customIconsets || {};
 window.customIconsets.baby = getIcon;
 
 window.babyDiaryHacs = Object.freeze({
-  version: "0.3.3",
+  version: "0.3.4",
   iconPrefix: "baby",
   colors: COLORS,
   icons: Object.freeze(Object.keys(ICONS))
@@ -142,20 +142,40 @@ const findDailyEntity = (hass, metric, baby) => {
     : candidates;
   const matches = babyCandidates.length > 0 ? babyCandidates : candidates;
 
-  return matches.length === 1 ? matches[0].entityId : undefined;
+  if (matches.length === 1) {
+    return matches[0].entityId;
+  }
+
+  if (babySlug && matches.length > 1) {
+    return matches
+      .map((candidate) => ({
+        ...candidate,
+        score:
+          (candidate.searchText.includes(`baby_diary_${babySlug}`) ? 4 : 0) +
+          (candidate.searchText.includes(`daily_${matcher.tokens[0]}_${babySlug}`) ? 3 : 0) +
+          (candidate.searchText.includes(`${babySlug}_daily`) ? 2 : 0) +
+          (candidate.searchText.includes(babySlug) ? 1 : 0)
+      }))
+      .sort((left, right) => right.score - left.score)[0]?.entityId;
+  }
+
+  return undefined;
 };
 
 class BabyDiaryDiaperCard extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+  }
+
   setConfig(config) {
     this._config = {
       service: "baby_diary.log_diaper_change",
       ...config
     };
 
-    this._lastRenderSignature = undefined;
-
     if (this._hass) {
-      this._renderCard();
+      this._render();
     }
   }
 
@@ -168,23 +188,14 @@ class BabyDiaryDiaperCard extends HTMLElement {
 
     const signature = this._getRenderSignature();
 
-    if (!this._card || signature !== this._lastRenderSignature) {
+    if (signature !== this._lastRenderSignature) {
       this._lastRenderSignature = signature;
-      this._renderCard();
-      return;
-    }
-
-    if (this._card) {
-      this._card.hass = hass;
+      this._render();
     }
   }
 
   getCardSize() {
-    if (this._card?.getCardSize) {
-      return this._card.getCardSize();
-    }
-
-    return 6;
+    return 4;
   }
 
   getGridOptions() {
@@ -196,89 +207,44 @@ class BabyDiaryDiaperCard extends HTMLElement {
     };
   }
 
-  async _renderCard() {
-    const helpers = await window.loadCardHelpers?.();
-
-    if (!helpers) {
-      throw new Error("Home Assistant card helpers are not available.");
-    }
-
-    const cardConfig = this._buildCardConfig();
-    const card = helpers.createCardElement(cardConfig);
-
-    if (this._hass) {
-      card.hass = this._hass;
-    }
-
-    this.replaceChildren(card);
-    this._card = card;
-  }
-
-  _buildCardConfig() {
+  _render() {
     const resolved = this._resolveDiaperEntities();
 
     if (resolved.missing.length > 0) {
-      return this._buildMissingEntitiesCard(resolved);
+      this._renderMissingEntitiesCard(resolved);
+      return;
     }
 
-    const entities = resolved.entities;
-    const service = this._config.service || "baby_diary.log_diaper_change";
+    const babyName = this._config.baby || this._inferBabyName(resolved.entities);
+    const stats = [
+      this._stat("diapers", "Fraldas", "baby:diaper", "diaper", resolved.entities.diapers),
+      this._stat("xixi", "Xixi", "baby:xixi", "xixi", resolved.entities.xixi),
+      this._stat("coco", "Cocó", "baby:coco", "coco", resolved.entities.coco)
+    ];
 
-    return {
-      type: "grid",
-      columns: 1,
-      square: false,
-      cards: [
-        {
-          type: "tile",
-          entity: entities.diapers,
-          name: this._config.diapers_name || "Fraldas",
-          icon: this._config.diapers_icon || "baby:diaper",
-          color: this._config.diapers_color || "white",
-          show_entity_picture: false,
-          hide_state: false,
-          vertical: false,
-          features: [{ type: "trend-graph" }],
-          features_position: "bottom",
-          grid_options: { columns: 12 }
-        },
-        {
-          type: "tile",
-          entity: entities.xixi,
-          name: this._config.xixi_name || "Xixis",
-          icon: this._config.xixi_icon || "baby:xixi",
-          color: this._config.xixi_color || "yellow",
-          vertical: false,
-          features: [{ type: "trend-graph" }],
-          features_position: "bottom"
-        },
-        {
-          type: "tile",
-          entity: entities.coco,
-          name: this._config.coco_name || "Cocos",
-          icon: this._config.coco_icon || "baby:coco",
-          color: this._config.coco_color || "brown",
-          vertical: false,
-          features: [{ type: "trend-graph" }],
-          features_position: "bottom"
-        },
-        {
-          type: "grid",
-          columns: 3,
-          square: false,
-          cards: [
-            this._button("Xixi", "baby:xixi", "yellow", "xixi", service),
-            this._button("Cocó", "baby:coco", "brown", "coco", service),
-            this._button("Ambos", "baby:ambos", "purple", "ambos", service)
-          ]
-        }
-      ],
-      column_span: this._config.column_span || 1,
-      background: this._config.background || {
-        color: "primary",
-        opacity: 20
-      }
-    };
+    this.shadowRoot.innerHTML = `
+      ${this._styles()}
+      <ha-card>
+        <div class="card">
+          <div class="header">
+            <div>
+              <div class="title">Fraldas</div>
+              ${babyName ? `<div class="subtitle">${this._escape(babyName)}</div>` : ""}
+            </div>
+          </div>
+          <div class="stats">
+            ${stats.map((stat) => this._statTemplate(stat)).join("")}
+          </div>
+          <div class="actions">
+            ${this._buttonTemplate("xixi", "Xixi", "baby:xixi")}
+            ${this._buttonTemplate("coco", "Cocó", "baby:coco")}
+            ${this._buttonTemplate("ambos", "Ambos", "baby:ambos")}
+          </div>
+        </div>
+      </ha-card>
+    `;
+
+    this._wireButtons();
   }
 
   _resolveDiaperEntities() {
@@ -309,29 +275,26 @@ class BabyDiaryDiaperCard extends HTMLElement {
     return { entities, missing };
   }
 
-  _buildMissingEntitiesCard(resolved) {
+  _renderMissingEntitiesCard(resolved) {
     const configuredBaby = this._config.baby
-      ? `The card is configured for \`${this._config.baby}\`.`
-      : "The card will auto-detect entities when exactly one Baby Diary baby exists.";
+      ? `O cartão está configurado para ${this._config.baby}.`
+      : "O cartão tenta detectar automaticamente quando só existe um bebé.";
     const missing = resolved.missing
-      .map((item) => `- ${item.label}${item.entityId ? `: \`${item.entityId}\`` : ""}`)
-      .join("\n");
+      .map((item) => `<li>${this._escape(item.label)}${item.entityId ? `: <code>${this._escape(item.entityId)}</code>` : ""}</li>`)
+      .join("");
 
-    return {
-      type: "markdown",
-      content: [
-        "### Baby Diary",
-        "",
-        "Daily diaper entities were not found yet.",
-        "",
-        configuredBaby,
-        "",
-        "Check that **Settings > Devices & services > Baby Diary** has a configured baby and restart Home Assistant after installing or updating from HACS.",
-        "",
-        "Missing:",
-        missing
-      ].join("\n")
-    };
+    this.shadowRoot.innerHTML = `
+      ${this._styles()}
+      <ha-card>
+        <div class="card missing">
+          <div class="title">Baby Diary</div>
+          <p>Não encontrei os sensores diários das fraldas.</p>
+          <p>${this._escape(configuredBaby)}</p>
+          <ul>${missing}</ul>
+          <p class="hint">Confirma que existe uma entrada Baby Diary em Definições > Dispositivos e serviços e reinicia o Home Assistant depois de atualizar pelo HACS.</p>
+        </div>
+      </ha-card>
+    `;
   }
 
   _getRenderSignature() {
@@ -340,11 +303,56 @@ class BabyDiaryDiaperCard extends HTMLElement {
     return JSON.stringify({
       baby: this._config?.baby || "",
       entities: resolved.entities,
-      missing: resolved.missing.map((item) => item.metric)
+      missing: resolved.missing.map((item) => item.metric),
+      states: Object.values(resolved.entities).map((entityId) => this._state(entityId))
     });
   }
 
-  _button(name, icon, color, type, service) {
+  _stat(metric, label, icon, variant, entityId) {
+    return {
+      metric,
+      label,
+      icon,
+      variant,
+      entityId,
+      value: this._state(entityId)
+    };
+  }
+
+  _statTemplate(stat) {
+    return `
+      <div class="stat ${stat.variant}">
+        <div class="stat-label">
+          <ha-icon icon="${stat.icon}"></ha-icon>
+          <span>${this._escape(stat.label)}</span>
+        </div>
+        <div class="stat-value">${this._escape(stat.value)}</div>
+      </div>
+    `;
+  }
+
+  _buttonTemplate(type, label, icon) {
+    return `
+      <button class="action ${type}" type="button" data-type="${type}">
+        <ha-icon icon="${icon}"></ha-icon>
+        <span>${this._escape(label)}</span>
+      </button>
+    `;
+  }
+
+  _wireButtons() {
+    for (const button of this.shadowRoot.querySelectorAll("button[data-type]")) {
+      button.addEventListener("click", () => this._logDiaper(button.dataset.type));
+    }
+  }
+
+  async _logDiaper(type) {
+    if (!this._hass) {
+      return;
+    }
+
+    const service = this._config.service || "baby_diary.log_diaper_change";
+    const [domain, serviceName] = service.split(".");
     const data = { type };
 
     if (this._config.baby) {
@@ -355,19 +363,211 @@ class BabyDiaryDiaperCard extends HTMLElement {
       data.entry_id = this._config.entry_id;
     }
 
-    return {
-      show_name: true,
-      show_icon: true,
-      type: "button",
-      name,
-      icon,
-      tap_action: {
-        action: "perform-action",
-        perform_action: service,
-        data
-      },
-      color
-    };
+    await this._hass.callService(domain, serviceName, data);
+  }
+
+  _state(entityId) {
+    const state = this._hass?.states?.[entityId]?.state;
+
+    return state ?? "0";
+  }
+
+  _inferBabyName(entities) {
+    const names = Object.values(entities)
+      .map((entityId) => this._hass?.states?.[entityId]?.attributes?.friendly_name)
+      .filter(Boolean);
+    const name = names[0] || "";
+    const match = name.match(/(?:Fraldas|Xixis|Cocos)\s+(.+?)\s+Counter/i);
+
+    return match?.[1];
+  }
+
+  _escape(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  _styles() {
+    return `
+      <style>
+        ha-card {
+          overflow: hidden;
+        }
+
+        .card {
+          padding: 16px;
+        }
+
+        .header {
+          align-items: center;
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 14px;
+        }
+
+        .title {
+          color: var(--primary-text-color);
+          font-size: 18px;
+          font-weight: 700;
+          line-height: 1.2;
+        }
+
+        .subtitle,
+        .hint {
+          color: var(--secondary-text-color);
+          font-size: 13px;
+          line-height: 1.4;
+          margin-top: 4px;
+        }
+
+        .stats,
+        .actions {
+          display: grid;
+          gap: 10px;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .stats {
+          margin-bottom: 12px;
+        }
+
+        .stat {
+          border: 1px solid var(--divider-color);
+          border-radius: 12px;
+          box-sizing: border-box;
+          min-width: 0;
+          padding: 12px;
+        }
+
+        .stat.diaper {
+          background: color-mix(in srgb, ${COLORS.diaper} 14%, transparent);
+        }
+
+        .stat.xixi {
+          background: color-mix(in srgb, ${COLORS.xixi} 18%, transparent);
+          border-color: color-mix(in srgb, ${COLORS.xixi} 45%, var(--divider-color));
+        }
+
+        .stat.coco {
+          background: color-mix(in srgb, ${COLORS.coco} 22%, transparent);
+          border-color: color-mix(in srgb, ${COLORS.coco} 45%, var(--divider-color));
+        }
+
+        .stat-label {
+          align-items: center;
+          color: var(--secondary-text-color);
+          display: flex;
+          font-size: 13px;
+          font-weight: 700;
+          gap: 6px;
+          min-width: 0;
+          white-space: nowrap;
+        }
+
+        .stat-label ha-icon {
+          --mdc-icon-size: 18px;
+          flex: 0 0 auto;
+        }
+
+        .stat-value {
+          color: var(--primary-text-color);
+          font-size: 28px;
+          font-weight: 800;
+          line-height: 1;
+          margin-top: 10px;
+        }
+
+        .action {
+          align-items: center;
+          appearance: none;
+          background: var(--secondary-background-color);
+          border: 1px solid var(--divider-color);
+          border-radius: 12px;
+          box-sizing: border-box;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: flex;
+          font: inherit;
+          font-size: 14px;
+          font-weight: 800;
+          gap: 8px;
+          justify-content: center;
+          min-height: 56px;
+          min-width: 0;
+          padding: 10px 8px;
+          width: 100%;
+        }
+
+        .action ha-icon {
+          --mdc-icon-size: 20px;
+          flex: 0 0 auto;
+        }
+
+        .action span {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .action.xixi {
+          border-color: ${COLORS.xixi};
+          color: ${COLORS.xixi};
+        }
+
+        .action.coco {
+          border-color: ${COLORS.coco};
+          color: ${COLORS.coco};
+        }
+
+        .action.ambos {
+          border-color: ${COLORS.ambos};
+          color: ${COLORS.ambos};
+        }
+
+        .action:active {
+          transform: translateY(1px);
+        }
+
+        .missing p {
+          color: var(--primary-text-color);
+          margin: 10px 0;
+        }
+
+        .missing ul {
+          margin: 10px 0;
+          padding-left: 18px;
+        }
+
+        .missing code {
+          background: var(--secondary-background-color);
+          border-radius: 4px;
+          padding: 1px 4px;
+        }
+
+        @media (max-width: 360px) {
+          .card {
+            padding: 12px;
+          }
+
+          .stats {
+            grid-template-columns: 1fr;
+          }
+
+          .actions {
+            gap: 8px;
+          }
+
+          .action {
+            font-size: 13px;
+            min-height: 52px;
+          }
+        }
+      </style>
+    `;
   }
 
   static getStubConfig() {

@@ -41,14 +41,14 @@ The dashboard card auto-detects entities when exactly one Baby Diary baby exists
 type: custom:baby-diary-diaper-card
 baby: goncalo
 entities:
-  diapers: sensor.daily_fraldas_goncalo_counter
-  xixi: sensor.daily_xixis_goncalo_counter
-  coco: sensor.daily_cocos_goncalo_counter
+  diapers: sensor.baby_diary_goncalo_daily_fraldas_goncalo_counter
+  xixi: sensor.baby_diary_goncalo_daily_xixis_goncalo_counter
+  coco: sensor.baby_diary_goncalo_daily_cocos_goncalo_counter
 ```
 
 ## Dashboard Shows Entity Not Found
 
-Update to Baby Diary HACS `0.3.3` or newer. Older versions could render native Home Assistant `Entity not found` cards when the baby name or entity IDs did not match.
+Update to Baby Diary HACS `0.3.4` or newer. Older versions could render native Home Assistant `Entity not found` cards when the baby name or entity IDs did not match.
 
 After updating:
 
