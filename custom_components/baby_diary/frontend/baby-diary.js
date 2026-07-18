@@ -59,7 +59,7 @@ window.customIconsets = window.customIconsets || {};
 window.customIconsets.baby = getIcon;
 
 window.babyDiaryHacs = Object.freeze({
-  version: "0.4.3",
+  version: "0.4.4",
   iconPrefix: "baby",
   colors: COLORS,
   icons: Object.freeze(Object.keys(ICONS))
@@ -244,6 +244,15 @@ const numberValue = (state) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const escapeHtml = (value) =>
+  String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[character]));
+
 const hassLocale = (hass) =>
   hass?.locale?.language || hass?.selectedLanguage || navigator.language || "pt-PT";
 
@@ -278,23 +287,6 @@ const formatDurationPrecise = (seconds) => {
   return `${remainingSeconds} s`;
 };
 
-const formatDurationBadge = (seconds) => {
-  const value = Math.max(0, Math.round(Number(seconds) || 0));
-  const hours = Math.floor(value / 3600);
-  const minutes = Math.floor((value % 3600) / 60);
-  const remainingSeconds = value % 60;
-
-  if (hours > 0) {
-    return `${hours}h ${String(minutes).padStart(2, "0")}m`;
-  }
-
-  if (minutes > 0) {
-    return remainingSeconds > 0 ? `${minutes}m ${String(remainingSeconds).padStart(2, "0")}s` : `${minutes}m`;
-  }
-
-  return `${remainingSeconds}s`;
-};
-
 const formatFeedingCount = (count) => {
   const value = Math.max(0, Math.round(Number(count) || 0));
 
@@ -316,39 +308,15 @@ class BabyDiaryDiaperCard extends HTMLElement {
       service: "baby_diary.log_diaper_change",
       ...config
     };
-
-    this._lastRenderSignature = undefined;
-
-    if (this._hass) {
-      this._renderCard();
-    }
+    this._render();
   }
 
   set hass(hass) {
     this._hass = hass;
-
-    if (!this._config) {
-      return;
-    }
-
-    const signature = this._getRenderSignature();
-
-    if (!this._card || signature !== this._lastRenderSignature) {
-      this._lastRenderSignature = signature;
-      this._renderCard();
-      return;
-    }
-
-    if (this._card) {
-      this._card.hass = hass;
-    }
+    this._render();
   }
 
   getCardSize() {
-    if (this._card?.getCardSize) {
-      return this._card.getCardSize();
-    }
-
     return 6;
   }
 
@@ -361,97 +329,85 @@ class BabyDiaryDiaperCard extends HTMLElement {
     };
   }
 
-  async _renderCard() {
-    const helpers = await window.loadCardHelpers?.();
-
-    if (!helpers) {
-      throw new Error("Home Assistant card helpers are not available.");
+  _render() {
+    if (!this._config || !this._hass) {
+      return;
     }
 
-    const cardConfig = this._buildCardConfig();
-    const card = helpers.createCardElement(cardConfig);
+    const resolved = this._resolveDiaperEntities();
+    const content =
+      resolved.missing.length > 0
+        ? this._missingTemplate(resolved)
+        : this._cardTemplate(resolved.entities);
 
-    if (this._hass) {
-      card.hass = this._hass;
-    }
-
-    this.replaceChildren(card);
-    this._card = card;
+    this.innerHTML = `${this._styles()}${content}`;
+    this.querySelectorAll("[data-log-diaper]").forEach((button) => {
+      button.addEventListener("click", () => this._logDiaper(button.dataset.logDiaper));
+    });
+    this.querySelectorAll("[data-open-history]").forEach((element) => {
+      element.addEventListener("click", () =>
+        this._openMoreInfo(element.dataset.entityId)
+      );
+      element.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          this._openMoreInfo(element.dataset.entityId);
+        }
+      });
+    });
   }
 
-  _buildCardConfig() {
-    const resolved = this._resolveDiaperEntities();
+  _cardTemplate(entities) {
+    const diaperCount = Math.max(0, Math.round(numberValue(this._hass.states[entities.diapers])));
+    const xixiCount = Math.max(0, Math.round(numberValue(this._hass.states[entities.xixi])));
+    const cocoCount = Math.max(0, Math.round(numberValue(this._hass.states[entities.coco])));
+    const ambosCount = Math.max(0, xixiCount + cocoCount - diaperCount);
+    const xixiOnly = Math.max(0, xixiCount - ambosCount);
+    const cocoOnly = Math.max(0, cocoCount - ambosCount);
+    const maxCount = Math.max(diaperCount, xixiCount, cocoCount, 1);
 
-    if (resolved.missing.length > 0) {
-      return this._buildMissingEntitiesCard(resolved);
-    }
-
-    const entities = resolved.entities;
-    const service = this._config.service || "baby_diary.log_diaper_change";
-
-    const cardConfig = {
-      type: "grid",
-      columns: 1,
-      square: false,
-      cards: [
-        {
-          type: "tile",
-          entity: entities.diapers,
-          name: this._config.diapers_name || "Fraldas",
-          icon: this._config.diapers_icon || "baby:diaper",
-          color: this._config.diapers_color || "white",
-          show_entity_picture: false,
-          hide_state: false,
-          vertical: false,
-          features: [{ type: "trend-graph" }],
-          features_position: "bottom"
-        },
-        {
-          type: "grid",
-          columns: 2,
-          square: false,
-          cards: [
-            {
-              type: "tile",
-              entity: entities.xixi,
-              name: this._config.xixi_name || "Xixis",
+    return `
+      <ha-card>
+        <div class="baby-diaper">
+          <section class="metrics" aria-label="Fraldas de hoje">
+            ${this._metricTemplate({
+              label: this._config.diapers_name || "Fraldas",
+              icon: this._config.diapers_icon || "baby:diaper",
+              color: this._config.diapers_color || COLORS.diaper,
+              count: diaperCount,
+              detail: "Hoje",
+              entityId: entities.diapers,
+              maxCount,
+              primary: true
+            })}
+            ${this._metricTemplate({
+              label: this._config.xixi_name || "Xixis",
               icon: this._config.xixi_icon || "baby:xixi",
-              color: this._config.xixi_color || "yellow",
-              vertical: false,
-              features: [{ type: "trend-graph" }],
-              features_position: "bottom"
-            },
-            {
-              type: "tile",
-              entity: entities.coco,
-              name: this._config.coco_name || "Cocós",
+              color: this._config.xixi_color || COLORS.xixi,
+              count: xixiCount,
+              detail: `${xixiOnly} xixi · ${ambosCount} ambos`,
+              entityId: entities.xixi,
+              maxCount
+            })}
+            ${this._metricTemplate({
+              label: this._config.coco_name || "Cocós",
               icon: this._config.coco_icon || "baby:coco",
-              color: this._config.coco_color || "brown",
-              vertical: false,
-              features: [{ type: "trend-graph" }],
-              features_position: "bottom"
-            }
-          ]
-        },
-        {
-          type: "grid",
-          columns: 3,
-          square: false,
-          cards: [
-            this._button("Xixi", "baby:xixi", "yellow", "xixi", service),
-            this._button("Cocó", "baby:coco", "brown", "coco", service),
-            this._button("Ambos", "baby:ambos", "purple", "ambos", service)
-          ]
-        }
-      ],
-      column_span: this._config.column_span || 1
-    };
+              color: this._config.coco_color || COLORS.coco,
+              count: cocoCount,
+              detail: `${cocoOnly} cocó · ${ambosCount} ambos`,
+              entityId: entities.coco,
+              maxCount
+            })}
+          </section>
 
-    if (this._config.background) {
-      cardConfig.background = this._config.background;
-    }
-
-    return cardConfig;
+          <section class="actions" aria-label="Registar fralda">
+            ${this._actionTemplate("Xixi", "baby:xixi", COLORS.xixi, "xixi")}
+            ${this._actionTemplate("Cocó", "baby:coco", COLORS.coco, "coco")}
+            ${this._actionTemplate("Ambos", "baby:ambos", COLORS.ambos, "ambos")}
+          </section>
+        </div>
+      </ha-card>
+    `;
   }
 
   _resolveDiaperEntities() {
@@ -482,43 +438,75 @@ class BabyDiaryDiaperCard extends HTMLElement {
     return { entities, missing };
   }
 
-  _buildMissingEntitiesCard(resolved) {
+  _missingTemplate(resolved) {
     const configuredBaby = this._config.baby
-      ? `The card is configured for \`${this._config.baby}\`.`
-      : "The card will auto-detect entities when exactly one Baby Diary baby exists.";
+      ? `O card está configurado para <code>${escapeHtml(this._config.baby)}</code>.`
+      : "O card tenta detetar entidades automaticamente quando existe apenas um bebé.";
     const missing = resolved.missing
-      .map((item) => `- ${item.label}${item.entityId ? `: \`${item.entityId}\`` : ""}`)
-      .join("\n");
+      .map((item) => `<li>${escapeHtml(item.label)}${item.entityId ? `: <code>${escapeHtml(item.entityId)}</code>` : ""}</li>`)
+      .join("");
 
-    return {
-      type: "markdown",
-      content: [
-        "### Baby Diary",
-        "",
-        "Daily diaper entities were not found yet.",
-        "",
-        configuredBaby,
-        "",
-        "Check that **Settings > Devices & services > Baby Diary** has a configured baby and restart Home Assistant after installing or updating from HACS.",
-        "",
-        "Missing:",
-        missing
-      ].join("\n")
-    };
+    return `
+      <ha-card>
+        <div class="baby-diaper missing">
+          <h3>Baby Diary</h3>
+          <p>As entidades diárias de fraldas ainda não foram encontradas.</p>
+          <p>${configuredBaby}</p>
+          <ul>${missing}</ul>
+        </div>
+      </ha-card>
+    `;
   }
 
-  _getRenderSignature() {
-    const resolved = this._resolveDiaperEntities();
+  _metricTemplate({ label, icon, color, count, detail, entityId, maxCount, primary = false }) {
+    const progress = count <= 0 ? 0 : Math.max(8, Math.min(100, (count / maxCount) * 100));
 
-    return JSON.stringify({
-      baby: this._config?.baby || "",
-      entities: resolved.entities,
-      missing: resolved.missing.map((item) => item.metric)
-    });
+    return `
+      <button
+        class="metric ${primary ? "primary" : ""}"
+        type="button"
+        style="--accent:${color};--progress:${progress}%"
+        data-open-history
+        data-entity-id="${escapeHtml(entityId)}"
+        title="Abrir histórico de ${escapeHtml(label)}"
+      >
+        <span class="metric-header">
+          <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+          <span>${escapeHtml(label)}</span>
+        </span>
+        <span class="metric-count">${count}</span>
+        <span class="metric-detail">${escapeHtml(detail)}</span>
+        <span class="today-chart" aria-hidden="true">
+          <span class="today-chart-fill"></span>
+          <span class="today-chart-line"></span>
+        </span>
+      </button>
+    `;
   }
 
-  _button(name, icon, color, type, service) {
+  _actionTemplate(name, icon, color, type) {
+    return `
+      <button
+        class="action"
+        type="button"
+        style="--accent:${color}"
+        data-log-diaper="${type}"
+      >
+        <ha-icon icon="${icon}"></ha-icon>
+        <span>${name}</span>
+      </button>
+    `;
+  }
+
+  async _logDiaper(type) {
+    const { domain, action } = splitService(
+      this._config.service || "baby_diary.log_diaper_change"
+    );
     const data = { type };
+
+    if (!domain || !action) {
+      return;
+    }
 
     if (this._config.baby) {
       data.baby_name = this._config.baby;
@@ -528,19 +516,226 @@ class BabyDiaryDiaperCard extends HTMLElement {
       data.entry_id = this._config.entry_id;
     }
 
-    return {
-      show_name: true,
-      show_icon: true,
-      type: "button",
-      name,
-      icon,
-      tap_action: {
-        action: "perform-action",
-        perform_action: service,
-        data
-      },
-      color
-    };
+    await this._hass.callService(domain, action, data);
+  }
+
+  _openMoreInfo(entityId) {
+    if (!entityId) {
+      return;
+    }
+
+    this.dispatchEvent(
+      new CustomEvent("hass-more-info", {
+        bubbles: true,
+        composed: true,
+        detail: { entityId }
+      })
+    );
+  }
+
+  _styles() {
+    return `
+      <style>
+        baby-diary-diaper-card {
+          display: block;
+        }
+
+        baby-diary-diaper-card ha-card {
+          overflow: hidden;
+        }
+
+        baby-diary-diaper-card .baby-diaper {
+          color: var(--primary-text-color);
+          display: grid;
+          gap: 12px;
+          padding: 12px;
+        }
+
+        baby-diary-diaper-card .metrics {
+          display: grid;
+          gap: 12px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        baby-diary-diaper-card .metric {
+          background:
+            linear-gradient(
+              180deg,
+              color-mix(in srgb, var(--accent) 10%, transparent),
+              color-mix(in srgb, var(--accent) 5%, transparent)
+            ),
+            color-mix(in srgb, var(--ha-card-background, var(--card-background-color)) 88%, transparent);
+          border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--divider-color));
+          border-radius: var(--ha-card-border-radius, 12px);
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: grid;
+          gap: 6px;
+          min-height: 128px;
+          overflow: hidden;
+          padding: 16px;
+          position: relative;
+          text-align: left;
+        }
+
+        baby-diary-diaper-card .metric.primary {
+          grid-column: 1 / -1;
+          min-height: 146px;
+        }
+
+        baby-diary-diaper-card .metric:focus-visible,
+        baby-diary-diaper-card .action:focus-visible {
+          outline: 2px solid color-mix(in srgb, var(--accent) 76%, transparent);
+          outline-offset: 2px;
+        }
+
+        baby-diary-diaper-card .metric-header {
+          align-items: center;
+          color: var(--secondary-text-color);
+          display: flex;
+          font-weight: 800;
+          gap: 8px;
+          min-width: 0;
+        }
+
+        baby-diary-diaper-card .metric-header ha-icon {
+          color: var(--accent);
+          height: 20px;
+          width: 20px;
+        }
+
+        baby-diary-diaper-card .metric-count {
+          font-size: 34px;
+          font-weight: 800;
+          line-height: 1;
+        }
+
+        baby-diary-diaper-card .metric-detail {
+          color: var(--secondary-text-color);
+          font-size: 13px;
+          min-height: 18px;
+        }
+
+        baby-diary-diaper-card .today-chart {
+          align-self: end;
+          background: color-mix(in srgb, var(--secondary-text-color) 12%, transparent);
+          border-radius: 999px;
+          display: block;
+          height: 34px;
+          margin-top: 10px;
+          overflow: hidden;
+          position: relative;
+          width: 100%;
+        }
+
+        baby-diary-diaper-card .today-chart-fill {
+          background: linear-gradient(
+            90deg,
+            color-mix(in srgb, var(--accent) 34%, transparent),
+            color-mix(in srgb, var(--accent) 12%, transparent)
+          );
+          bottom: 0;
+          left: 0;
+          position: absolute;
+          top: 0;
+          width: var(--progress);
+        }
+
+        baby-diary-diaper-card .today-chart-line {
+          background: var(--accent);
+          border-radius: 999px;
+          bottom: 0;
+          box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 22%, transparent);
+          height: 3px;
+          left: 0;
+          position: absolute;
+          width: var(--progress);
+        }
+
+        baby-diary-diaper-card .actions {
+          display: grid;
+          gap: 12px;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        baby-diary-diaper-card .action {
+          align-items: center;
+          background:
+            linear-gradient(
+              180deg,
+              color-mix(in srgb, var(--accent) 9%, transparent),
+              color-mix(in srgb, var(--accent) 4%, transparent)
+            ),
+            color-mix(in srgb, var(--ha-card-background, var(--card-background-color)) 88%, transparent);
+          border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--divider-color));
+          border-radius: var(--ha-card-border-radius, 12px);
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: flex;
+          flex-direction: column;
+          font-size: 18px;
+          font-weight: 800;
+          gap: 10px;
+          justify-content: center;
+          min-height: 110px;
+          padding: 14px 8px;
+        }
+
+        baby-diary-diaper-card .action ha-icon {
+          color: var(--accent);
+          height: 42px;
+          width: 42px;
+        }
+
+        baby-diary-diaper-card .missing {
+          padding: 18px;
+        }
+
+        baby-diary-diaper-card .missing h3 {
+          margin: 0 0 8px;
+        }
+
+        baby-diary-diaper-card .missing p,
+        baby-diary-diaper-card .missing li {
+          color: var(--secondary-text-color);
+        }
+
+        baby-diary-diaper-card .missing code {
+          color: var(--primary-text-color);
+        }
+
+        @media (max-width: 520px) {
+          baby-diary-diaper-card .baby-diaper {
+            gap: 10px;
+            padding: 10px;
+          }
+
+          baby-diary-diaper-card .metrics,
+          baby-diary-diaper-card .actions {
+            gap: 10px;
+          }
+
+          baby-diary-diaper-card .metric {
+            min-height: 116px;
+            padding: 14px;
+          }
+
+          baby-diary-diaper-card .metric.primary {
+            min-height: 132px;
+          }
+
+          baby-diary-diaper-card .action {
+            font-size: 16px;
+            min-height: 96px;
+          }
+
+          baby-diary-diaper-card .action ha-icon {
+            height: 34px;
+            width: 34px;
+          }
+        }
+      </style>
+    `;
   }
 
   static getStubConfig() {
@@ -650,6 +845,7 @@ class BabyDiaryFeedingCard extends HTMLElement {
     const currentSeconds = this._currentFeedingSeconds(currentState);
     const active = currentState?.attributes?.active === true;
     const sessions = this._sessionsFromState(dailyState, currentState);
+    const stats = this._feedingStats(sessions);
     const sessionChart = this._sessionChart(sessions);
     const buttonTitle = active ? "Parar mamada" : "Iniciar mamada";
     const buttonSubtitle = active
@@ -673,6 +869,11 @@ class BabyDiaryFeedingCard extends HTMLElement {
               ${active ? "Em curso" : "Em pausa"}
             </div>
           </header>
+
+          <section class="stats" aria-label="Estatísticas de hoje">
+            ${this._statTemplate("Duração média", stats.averageDuration)}
+            ${this._statTemplate("Espaçamento médio", stats.averageSpacing)}
+          </section>
 
           <section
             class="timeline"
@@ -713,7 +914,8 @@ class BabyDiaryFeedingCard extends HTMLElement {
     );
     const bars = this._layoutSessions(sessions)
       .map((session) => {
-        const width = Math.max(2.6, (session.durationSeconds / 86400) * 100);
+        const width = Math.min(100, Math.max(2.6, (session.durationSeconds / 86400) * 100));
+        const left = Math.min(100 - width, Math.max(0, session.visualLeft));
         const height = 28 + (session.durationSeconds / maxDuration) * 54;
         const label = `${formatTime(this._hass, session.startedAt)} · ${formatDurationPrecise(
           session.durationSeconds
@@ -722,11 +924,9 @@ class BabyDiaryFeedingCard extends HTMLElement {
         return `
           <div
             class="session ${session.active ? "active" : ""}"
-            style="left:${session.visualLeft}%;width:${width}%;height:${height}px;--label-offset:${session.labelOffset}px"
+            style="left:${left}%;width:${width}%;height:${height}px"
             title="${label}"
-          >
-            <span>${formatDurationBadge(session.durationSeconds)}</span>
-          </div>
+          ></div>
         `;
       })
       .join("");
@@ -818,6 +1018,49 @@ class BabyDiaryFeedingCard extends HTMLElement {
         };
       });
     });
+  }
+
+  _feedingStats(sessions) {
+    const completedSessions = sessions.filter((session) => !session.active);
+    const startedTimes = sessions
+      .map((session) => new Date(session.startedAt).getTime())
+      .filter((time) => Number.isFinite(time))
+      .sort((left, right) => left - right);
+
+    const averageDuration =
+      completedSessions.length > 0
+        ? formatDurationPrecise(
+            completedSessions.reduce(
+              (total, session) => total + session.durationSeconds,
+              0
+            ) / completedSessions.length
+          )
+        : "Sem dados";
+
+    if (startedTimes.length < 2) {
+      return {
+        averageDuration,
+        averageSpacing: "Sem dados"
+      };
+    }
+
+    const totalSpacing = startedTimes
+      .slice(1)
+      .reduce((total, startedAt, index) => total + (startedAt - startedTimes[index]), 0);
+
+    return {
+      averageDuration,
+      averageSpacing: formatDurationPrecise(totalSpacing / (startedTimes.length - 1) / 1000)
+    };
+  }
+
+  _statTemplate(label, value) {
+    return `
+      <div class="stat">
+        <span>${label}</span>
+        <strong>${value}</strong>
+      </div>
+    `;
   }
 
   _resolveFeedingEntities() {
@@ -995,10 +1238,39 @@ class BabyDiaryFeedingCard extends HTMLElement {
           color: ${COLORS.mamada};
         }
 
+        baby-diary-feeding-card .stats {
+          display: grid;
+          gap: 10px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          margin-top: 16px;
+        }
+
+        baby-diary-feeding-card .stat {
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--divider-color) 75%, transparent);
+          border-radius: 12px;
+          display: grid;
+          gap: 4px;
+          min-width: 0;
+          padding: 10px 12px;
+        }
+
+        baby-diary-feeding-card .stat span {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        baby-diary-feeding-card .stat strong {
+          color: var(--primary-text-color);
+          font-size: 15px;
+          overflow-wrap: anywhere;
+        }
+
         baby-diary-feeding-card .timeline {
           cursor: pointer;
-          height: 150px;
-          margin: 18px 0 14px;
+          height: 118px;
+          margin: 16px 0 14px;
           outline: none;
           position: relative;
         }
@@ -1036,36 +1308,18 @@ class BabyDiaryFeedingCard extends HTMLElement {
         baby-diary-feeding-card .session {
           background: linear-gradient(
             180deg,
-            color-mix(in srgb, ${COLORS.mamada} 88%, white 12%),
-            color-mix(in srgb, ${COLORS.mamada} 42%, transparent)
+            color-mix(in srgb, ${COLORS.mamada} 78%, var(--primary-text-color) 8%),
+            color-mix(in srgb, ${COLORS.mamada} 34%, transparent)
           );
-          border: 1px solid color-mix(in srgb, ${COLORS.mamada} 82%, transparent);
-          border-radius: 10px 10px 4px 4px;
+          border: 1px solid color-mix(in srgb, ${COLORS.mamada} 62%, transparent);
+          border-radius: 999px 999px 5px 5px;
           bottom: 32px;
-          min-width: 12px;
+          min-width: 14px;
           position: absolute;
         }
 
         baby-diary-feeding-card .session.active {
-          box-shadow: 0 0 0 3px color-mix(in srgb, ${COLORS.mamada} 20%, transparent);
-        }
-
-        baby-diary-feeding-card .session span {
-          background: color-mix(
-            in srgb,
-            ${COLORS.mamada} 72%,
-            transparent
-          );
-          border-radius: 999px;
-          color: var(--primary-text-color);
-          font-size: 11px;
-          font-weight: 800;
-          left: 50%;
-          padding: 3px 7px;
-          position: absolute;
-          top: calc(-26px - var(--label-offset, 0px));
-          transform: translateX(-50%);
-          white-space: nowrap;
+          box-shadow: 0 0 0 3px color-mix(in srgb, ${COLORS.mamada} 18%, transparent);
         }
 
         baby-diary-feeding-card .toggle {
