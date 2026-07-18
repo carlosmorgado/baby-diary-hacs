@@ -15,13 +15,15 @@ The diaper card builds a Home Assistant grid with:
 - daily diaper total
 - daily xixi total
 - daily coco total
-- native Home Assistant trend graphs
+- a today-only visual summary based on the daily sensors
 - quick buttons for Xixi, Coco, and Ambos
 
 The feeding card builds a themed Baby Diary card with:
 
 - today's feeding count
 - today's total feeding duration
+- average feeding duration
+- average spacing between feedings
 - a timeline of today's completed feeding sessions
 - the active feeding session when one is running
 - one button that starts or stops the feeding session
@@ -125,9 +127,9 @@ entry_id: 01J2EXAMPLEENTRYID
 
 ## What The Card Generates
 
-The diaper card wraps native Home Assistant `tile`, `grid`, and `button` cards. It uses nested grids so the diaper tile spans the full card width, xixi and coco sit side by side, and the three logging buttons share the full card width. The wrapper resolves Baby Diary's generated entity IDs before passing them into the native cards, which avoids broken `Entity not found` tiles when Home Assistant creates longer entity IDs.
+The diaper card renders one themed `ha-card` in light DOM and uses Baby Diary's generated daily sensors directly. Its visual summary is based on today's daily sensor values, not Home Assistant's rolling entity history, so it does not show a last-24-hours trend by accident. It resolves Baby Diary's generated entity IDs before rendering, which avoids broken `Entity not found` tiles when Home Assistant creates longer entity IDs.
 
-The feeding card uses one `ha-card` and the active Home Assistant theme. It renders that `ha-card` in light DOM so normal Home Assistant theme and card-mod rules can style the card surface. It reads the daily feeding sensor's `sessions` attribute to draw the timeline, so the chart can show both when feedings happened and how long each feeding lasted.
+The feeding card also uses one `ha-card` and the active Home Assistant theme. It renders that `ha-card` in light DOM so normal Home Assistant theme and card-mod rules can style the card surface. It reads the daily feeding sensor's `sessions` attribute to draw the timeline and calculate average duration and average spacing, so the chart can show both when feedings happened and how long each feeding lasted.
 
 ## Entity Not Found
 
