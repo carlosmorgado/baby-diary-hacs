@@ -59,7 +59,7 @@ window.customIconsets = window.customIconsets || {};
 window.customIconsets.baby = getIcon;
 
 window.babyDiaryHacs = Object.freeze({
-  version: "0.4.0",
+  version: "0.4.1",
   iconPrefix: "baby",
   colors: COLORS,
   icons: Object.freeze(Object.keys(ICONS))
@@ -259,18 +259,40 @@ const formatTime = (hass, value) => {
   }).format(date);
 };
 
-const formatDuration = (minutes) => {
-  const value = Math.max(0, Math.round(Number(minutes) || 0));
+const formatDurationPrecise = (seconds) => {
+  const value = Math.max(0, Math.round(Number(seconds) || 0));
+  const hours = Math.floor(value / 3600);
+  const minutes = Math.floor((value % 3600) / 60);
+  const remainingSeconds = value % 60;
 
-  if (value === 0) {
-    return "0 min";
+  if (hours > 0) {
+    return `${hours} h ${String(minutes).padStart(2, "0")} min ${String(
+      remainingSeconds
+    ).padStart(2, "0")} s`;
   }
 
-  if (value === 1) {
-    return "1 min";
+  if (minutes > 0) {
+    return `${minutes} min ${String(remainingSeconds).padStart(2, "0")} s`;
   }
 
-  return `${value} min`;
+  return `${remainingSeconds} s`;
+};
+
+const formatDurationBadge = (seconds) => {
+  const value = Math.max(0, Math.round(Number(seconds) || 0));
+  const hours = Math.floor(value / 3600);
+  const minutes = Math.floor((value % 3600) / 60);
+  const remainingSeconds = value % 60;
+
+  if (hours > 0) {
+    return `${hours}h ${String(minutes).padStart(2, "0")}m`;
+  }
+
+  if (minutes > 0) {
+    return remainingSeconds > 0 ? `${minutes}m ${String(remainingSeconds).padStart(2, "0")}s` : `${minutes}m`;
+  }
+
+  return `${remainingSeconds}s`;
 };
 
 const formatFeedingCount = (count) => {
@@ -550,6 +572,7 @@ class BabyDiaryFeedingCard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
+    this._activeTimer = undefined;
   }
 
   setConfig(config) {
@@ -563,6 +586,10 @@ class BabyDiaryFeedingCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     this._render();
+  }
+
+  disconnectedCallback() {
+    this._syncActiveTimer(false);
   }
 
   getCardSize() {
@@ -584,6 +611,10 @@ class BabyDiaryFeedingCard extends HTMLElement {
     }
 
     const resolved = this._resolveFeedingEntities();
+    if (resolved.missing.length > 0) {
+      this._syncActiveTimer(false);
+    }
+
     const content =
       resolved.missing.length > 0
         ? this._missingTemplate(resolved)
@@ -593,21 +624,37 @@ class BabyDiaryFeedingCard extends HTMLElement {
     this.shadowRoot
       .querySelector("[data-toggle-feeding]")
       ?.addEventListener("click", () => this._toggleFeeding());
+    this.shadowRoot
+      .querySelector("[data-open-history]")
+      ?.addEventListener("click", (event) =>
+        this._openMoreInfo(event.currentTarget.dataset.entityId)
+      );
+    this.shadowRoot
+      .querySelector("[data-open-history]")
+      ?.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          this._openMoreInfo(event.currentTarget.dataset.entityId);
+        }
+      });
   }
 
   _cardTemplate(entities) {
     const dailyState = this._hass.states[entities.feedings];
     const currentState = this._hass.states[entities.currentDuration];
     const count = numberValue(dailyState);
-    const totalMinutes = Number(dailyState?.attributes?.duration_minutes) || 0;
-    const currentMinutes = numberValue(currentState);
+    const totalSeconds =
+      Number(dailyState?.attributes?.duration_seconds) ||
+      (Number(dailyState?.attributes?.duration_minutes) || 0) * 60;
+    const currentSeconds = this._currentFeedingSeconds(currentState);
     const active = currentState?.attributes?.active === true;
     const sessions = this._sessionsFromState(dailyState, currentState);
     const sessionChart = this._sessionChart(sessions);
     const buttonTitle = active ? "Parar mamada" : "Iniciar mamada";
     const buttonSubtitle = active
-      ? `Em curso · ${formatDuration(currentMinutes)}`
+      ? `Em curso · ${formatDurationPrecise(currentSeconds)}`
       : "Tocar para começar";
+    this._syncActiveTimer(active);
 
     return `
       <ha-card>
@@ -619,14 +666,22 @@ class BabyDiaryFeedingCard extends HTMLElement {
                 <span>${this._config.name || "Mamadas"}</span>
               </div>
               <div class="total">${formatFeedingCount(count)}</div>
-              <div class="subtitle">${formatDuration(totalMinutes)} hoje</div>
+              <div class="subtitle">${formatDurationPrecise(totalSeconds)} hoje</div>
             </div>
             <div class="status ${active ? "active" : ""}">
               ${active ? "Em curso" : "Em pausa"}
             </div>
           </header>
 
-          <section class="timeline" aria-label="Mamadas de hoje">
+          <section
+            class="timeline"
+            aria-label="Abrir histórico das mamadas de hoje"
+            data-open-history
+            data-entity-id="${entities.feedings}"
+            role="button"
+            tabindex="0"
+            title="Abrir histórico"
+          >
             ${sessionChart}
           </section>
 
@@ -652,25 +707,24 @@ class BabyDiaryFeedingCard extends HTMLElement {
     }
 
     const maxDuration = Math.max(
-      ...sessions.map((session) => session.durationMinutes),
+      ...sessions.map((session) => session.durationSeconds),
       1
     );
-    const bars = sessions
+    const bars = this._layoutSessions(sessions)
       .map((session) => {
-        const left = Math.min(98, Math.max(0, (session.startMinute / 1440) * 100));
-        const width = Math.max(2.8, (session.durationMinutes / 1440) * 100);
-        const height = 28 + (session.durationMinutes / maxDuration) * 54;
-        const label = `${formatTime(this._hass, session.startedAt)} · ${formatDuration(
-          session.durationMinutes
+        const width = Math.max(2.6, (session.durationSeconds / 86400) * 100);
+        const height = 28 + (session.durationSeconds / maxDuration) * 54;
+        const label = `${formatTime(this._hass, session.startedAt)} · ${formatDurationPrecise(
+          session.durationSeconds
         )}`;
 
         return `
           <div
             class="session ${session.active ? "active" : ""}"
-            style="left:${left}%;width:${width}%;height:${height}px"
+            style="left:${session.visualLeft}%;width:${width}%;height:${height}px;--label-offset:${session.labelOffset}px"
             title="${label}"
           >
-            <span>${formatDuration(session.durationMinutes)}</span>
+            <span>${formatDurationBadge(session.durationSeconds)}</span>
           </div>
         `;
       })
@@ -698,7 +752,7 @@ class BabyDiaryFeedingCard extends HTMLElement {
       const activeSession = this._normalizeSession({
         started_at: startedAt,
         ended_at: new Date().toISOString(),
-        duration_minutes: Math.max(1, numberValue(currentState)),
+        duration_seconds: this._currentFeedingSeconds(currentState),
         active: true
       });
 
@@ -720,13 +774,49 @@ class BabyDiaryFeedingCard extends HTMLElement {
       1,
       Math.round(Number(session.duration_minutes) || 0)
     );
+    const durationSeconds = Math.max(
+      1,
+      Math.round(Number(session.duration_seconds) || durationMinutes * 60)
+    );
 
     return {
       startedAt: startedAt.toISOString(),
-      startMinute: startedAt.getHours() * 60 + startedAt.getMinutes(),
+      startSecond:
+        startedAt.getHours() * 3600 +
+        startedAt.getMinutes() * 60 +
+        startedAt.getSeconds(),
       durationMinutes,
+      durationSeconds,
       active: session.active === true
     };
+  }
+
+  _layoutSessions(sessions) {
+    const groups = [];
+    const sorted = [...sessions].sort((left, right) => left.startSecond - right.startSecond);
+
+    for (const session of sorted) {
+      const latestGroup = groups[groups.length - 1];
+      if (!latestGroup || session.startSecond - latestGroup.startSecond > 600) {
+        groups.push({ startSecond: session.startSecond, sessions: [session] });
+        continue;
+      }
+
+      latestGroup.sessions.push(session);
+    }
+
+    return groups.flatMap((group) => {
+      const middle = (group.sessions.length - 1) / 2;
+      return group.sessions.map((session, index) => {
+        const baseLeft = (session.startSecond / 86400) * 100;
+        const offset = (index - middle) * 3;
+        return {
+          ...session,
+          visualLeft: Math.min(98, Math.max(0, baseLeft + offset)),
+          labelOffset: index * 20
+        };
+      });
+    });
   }
 
   _resolveFeedingEntities() {
@@ -793,6 +883,47 @@ class BabyDiaryFeedingCard extends HTMLElement {
     }
 
     await this._hass.callService(domain, action, data);
+  }
+
+  _currentFeedingSeconds(currentState) {
+    const startedAt = currentState?.attributes?.started_at;
+    if (startedAt) {
+      const started = new Date(startedAt);
+      if (!Number.isNaN(started.getTime())) {
+        return Math.max(0, Math.round((Date.now() - started.getTime()) / 1000));
+      }
+    }
+
+    return Math.max(
+      0,
+      Math.round(Number(currentState?.attributes?.duration_seconds) || numberValue(currentState) * 60)
+    );
+  }
+
+  _openMoreInfo(entityId) {
+    if (!entityId) {
+      return;
+    }
+
+    this.dispatchEvent(
+      new CustomEvent("hass-more-info", {
+        bubbles: true,
+        composed: true,
+        detail: { entityId }
+      })
+    );
+  }
+
+  _syncActiveTimer(active) {
+    if (active && !this._activeTimer) {
+      this._activeTimer = window.setInterval(() => this._render(), 1000);
+      return;
+    }
+
+    if (!active && this._activeTimer) {
+      window.clearInterval(this._activeTimer);
+      this._activeTimer = undefined;
+    }
   }
 
   _styles() {
@@ -864,14 +995,21 @@ class BabyDiaryFeedingCard extends HTMLElement {
         }
 
         .timeline {
-          height: 128px;
+          cursor: pointer;
+          height: 150px;
           margin: 18px 0 14px;
+          outline: none;
           position: relative;
+        }
+
+        .timeline:focus-visible {
+          border-radius: 12px;
+          box-shadow: 0 0 0 2px color-mix(in srgb, ${COLORS.mamada} 70%, transparent);
         }
 
         .chart-line {
           background: color-mix(in srgb, var(--secondary-text-color) 18%, transparent);
-          bottom: 28px;
+          bottom: 32px;
           height: 1px;
           left: 0;
           position: absolute;
@@ -902,7 +1040,7 @@ class BabyDiaryFeedingCard extends HTMLElement {
           );
           border: 1px solid color-mix(in srgb, ${COLORS.mamada} 82%, transparent);
           border-radius: 10px 10px 4px 4px;
-          bottom: 28px;
+          bottom: 32px;
           min-width: 12px;
           position: absolute;
         }
@@ -915,7 +1053,7 @@ class BabyDiaryFeedingCard extends HTMLElement {
           background: color-mix(
             in srgb,
             ${COLORS.mamada} 72%,
-            var(--card-background-color, var(--ha-card-background, #1f1f1f))
+            transparent
           );
           border-radius: 999px;
           color: var(--primary-text-color);
@@ -924,7 +1062,7 @@ class BabyDiaryFeedingCard extends HTMLElement {
           left: 50%;
           padding: 3px 7px;
           position: absolute;
-          top: -26px;
+          top: calc(-26px - var(--label-offset, 0px));
           transform: translateX(-50%);
           white-space: nowrap;
         }
@@ -933,8 +1071,8 @@ class BabyDiaryFeedingCard extends HTMLElement {
           align-items: center;
           background: color-mix(
             in srgb,
-            ${COLORS.mamada} 14%,
-            var(--card-background-color, var(--ha-card-background, #1f1f1f))
+            ${COLORS.mamada} 22%,
+            transparent
           );
           border: 1px solid color-mix(in srgb, ${COLORS.mamada} 48%, transparent);
           border-radius: 14px;
@@ -951,8 +1089,8 @@ class BabyDiaryFeedingCard extends HTMLElement {
         .toggle.active {
           background: color-mix(
             in srgb,
-            ${COLORS.mamada} 26%,
-            var(--card-background-color, var(--ha-card-background, #1f1f1f))
+            ${COLORS.mamada} 34%,
+            transparent
           );
         }
 
