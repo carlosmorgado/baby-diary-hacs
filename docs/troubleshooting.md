@@ -12,7 +12,7 @@ https://github.com/carlosmorgado/baby-diary-hacs
 
 ## The Card Type Is Not Found
 
-If Home Assistant says `custom:baby-diary-diaper-card` was not found:
+If Home Assistant says `custom:baby-diary-diaper-card` or `custom:baby-diary-feeding-card` was not found:
 
 1. Confirm the Baby Diary integration is installed.
 2. Confirm at least one Baby Diary config entry exists.
@@ -58,7 +58,7 @@ After updating:
 4. If you have more than one baby, set `baby` in the card YAML.
 5. If the entities were renamed, use explicit `entities` overrides.
 
-Version `0.3.7` also removes stale Baby Diary frontend module URLs from older releases. This matters because an older loaded module can define the custom card first and keep showing the old broken layout until Home Assistant and the browser are refreshed.
+Version `0.4.0` also removes stale Baby Diary frontend module URLs from older releases. This matters because an older loaded module can define the custom card first and keep showing the old broken layout until Home Assistant and the browser are refreshed.
 
 ## Service Call Fails With Multiple Babies
 

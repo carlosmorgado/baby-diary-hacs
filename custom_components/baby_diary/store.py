@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import datetime
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -20,6 +21,7 @@ from .const import (
     DIAPER_COCO,
     DIAPER_XIXI,
     DOMAIN,
+    FEEDING_SESSION_LIMIT,
     METRIC_COCO,
     METRIC_DIAPERS,
     METRIC_XIXI,
@@ -85,6 +87,54 @@ class BabyDiaryStore:
         await self.async_save()
         self.async_update_listeners()
 
+    async def async_toggle_feeding(self) -> str:
+        """Start or stop a feeding session."""
+        if self.feeding_active:
+            await self.async_stop_feeding()
+            return "stopped"
+
+        await self.async_start_feeding()
+        return "started"
+
+    async def async_start_feeding(self) -> None:
+        """Start a feeding session."""
+        self._rollover_daily()
+
+        if self.feeding_active:
+            return
+
+        self._data["feedings"]["active_start"] = dt_util.now().isoformat()
+        await self.async_save()
+        self.async_update_listeners()
+
+    async def async_stop_feeding(self) -> None:
+        """Stop the active feeding session."""
+        self._rollover_daily()
+
+        active_start = self.feeding_started_at
+        if active_start is None:
+            return
+
+        ended_at = dt_util.now()
+        duration_seconds = max(1, int((ended_at - active_start).total_seconds()))
+        session = {
+            "started_at": active_start.isoformat(),
+            "ended_at": ended_at.isoformat(),
+            "duration_seconds": duration_seconds,
+        }
+
+        feedings = self._data["feedings"]
+        feedings["active_start"] = None
+        feedings["last_duration_seconds"] = duration_seconds
+        feedings["totals"]["count"] += 1
+        feedings["totals"]["duration_seconds"] += duration_seconds
+        feedings["daily"]["count"] += 1
+        feedings["daily"]["duration_seconds"] += duration_seconds
+        feedings["sessions"] = [*feedings["sessions"], session][-FEEDING_SESSION_LIMIT:]
+
+        await self.async_save()
+        self.async_update_listeners()
+
     async def async_save(self) -> None:
         """Persist data."""
         await self._store.async_save(self._data)
@@ -104,6 +154,61 @@ class BabyDiaryStore:
         """Return daily count."""
         self._rollover_daily()
         return int(self._data["daily"][metric])
+
+    @property
+    def feeding_active(self) -> bool:
+        """Return whether a feeding session is active."""
+        return self.feeding_started_at is not None
+
+    @property
+    def feeding_started_at(self) -> datetime | None:
+        """Return the current feeding start time."""
+        return self._parse_datetime(self._data["feedings"].get("active_start"))
+
+    @callback
+    def feeding_elapsed_seconds(self) -> int:
+        """Return active feeding duration in seconds."""
+        active_start = self.feeding_started_at
+        if active_start is None:
+            return 0
+
+        return max(0, int((dt_util.now() - active_start).total_seconds()))
+
+    @callback
+    def total_feeding_count(self) -> int:
+        """Return total feeding count."""
+        self._rollover_daily()
+        return int(self._data["feedings"]["totals"]["count"])
+
+    @callback
+    def total_feeding_duration_seconds(self) -> int:
+        """Return total feeding duration in seconds."""
+        self._rollover_daily()
+        return int(self._data["feedings"]["totals"]["duration_seconds"])
+
+    @callback
+    def daily_feeding_count(self) -> int:
+        """Return daily feeding count."""
+        self._rollover_daily()
+        return int(self._data["feedings"]["daily"]["count"])
+
+    @callback
+    def daily_feeding_duration_seconds(self) -> int:
+        """Return daily feeding duration in seconds."""
+        self._rollover_daily()
+        return int(self._data["feedings"]["daily"]["duration_seconds"])
+
+    @callback
+    def last_feeding_duration_seconds(self) -> int:
+        """Return last completed feeding duration in seconds."""
+        self._rollover_daily()
+        return int(self._data["feedings"]["last_duration_seconds"])
+
+    @callback
+    def daily_feeding_sessions(self) -> list[dict[str, Any]]:
+        """Return completed feeding sessions for the current day."""
+        self._rollover_daily()
+        return list(self._data["feedings"]["sessions"])
 
     @callback
     def async_update_listeners(self) -> None:
@@ -152,15 +257,19 @@ class BabyDiaryStore:
 
         self._data["daily_date"] = today
         self._data["daily"] = self._empty_counts()
+        self._data["feedings"]["daily"] = self._empty_feeding_counts()
+        self._data["feedings"]["sessions"] = []
         return True
 
     def _normalize(self, stored: dict[str, Any]) -> dict[str, Any]:
         totals = {**self._empty_counts(), **stored.get("totals", {})}
         daily = {**self._empty_counts(), **stored.get("daily", {})}
+        feedings = self._normalize_feedings(stored.get("feedings", {}))
         return {
             "daily_date": stored.get("daily_date") or dt_util.now().date().isoformat(),
             "totals": {metric: int(totals.get(metric, 0)) for metric in METRICS},
             "daily": {metric: int(daily.get(metric, 0)) for metric in METRICS},
+            "feedings": feedings,
         }
 
     def _empty_data(self) -> dict[str, Any]:
@@ -168,8 +277,111 @@ class BabyDiaryStore:
             "daily_date": dt_util.now().date().isoformat(),
             "totals": self._empty_counts(),
             "daily": self._empty_counts(),
+            "feedings": self._empty_feedings(),
         }
 
     @staticmethod
     def _empty_counts() -> dict[str, int]:
         return {metric: 0 for metric in METRICS}
+
+    @staticmethod
+    def _empty_feeding_counts() -> dict[str, int]:
+        return {"count": 0, "duration_seconds": 0}
+
+    def _empty_feedings(self) -> dict[str, Any]:
+        return {
+            "active_start": None,
+            "last_duration_seconds": 0,
+            "totals": self._empty_feeding_counts(),
+            "daily": self._empty_feeding_counts(),
+            "sessions": [],
+        }
+
+    def _normalize_feedings(self, stored: dict[str, Any]) -> dict[str, Any]:
+        if not isinstance(stored, dict):
+            stored = {}
+
+        feedings = {**self._empty_feedings(), **stored}
+        stored_totals = feedings.get("totals", {})
+        stored_daily = feedings.get("daily", {})
+        if not isinstance(stored_totals, dict):
+            stored_totals = {}
+        if not isinstance(stored_daily, dict):
+            stored_daily = {}
+
+        totals = {
+            **self._empty_feeding_counts(),
+            **stored_totals,
+        }
+        daily = {
+            **self._empty_feeding_counts(),
+            **stored_daily,
+        }
+
+        return {
+            "active_start": self._normalize_datetime_value(feedings.get("active_start")),
+            "last_duration_seconds": self._to_int(
+                feedings.get("last_duration_seconds", 0)
+            ),
+            "totals": {
+                "count": self._to_int(totals.get("count", 0)),
+                "duration_seconds": self._to_int(totals.get("duration_seconds", 0)),
+            },
+            "daily": {
+                "count": self._to_int(daily.get("count", 0)),
+                "duration_seconds": self._to_int(daily.get("duration_seconds", 0)),
+            },
+            "sessions": self._normalize_sessions(feedings.get("sessions", [])),
+        }
+
+    def _normalize_sessions(self, sessions: Any) -> list[dict[str, Any]]:
+        if not isinstance(sessions, list):
+            return []
+
+        normalized: list[dict[str, Any]] = []
+        for session in sessions:
+            if not isinstance(session, dict):
+                continue
+
+            started_at = self._normalize_datetime_value(session.get("started_at"))
+            ended_at = self._normalize_datetime_value(session.get("ended_at"))
+            duration_seconds = self._to_int(session.get("duration_seconds", 0))
+
+            if started_at and ended_at and duration_seconds > 0:
+                normalized.append(
+                    {
+                        "started_at": started_at,
+                        "ended_at": ended_at,
+                        "duration_seconds": duration_seconds,
+                    }
+                )
+
+        return normalized[-FEEDING_SESSION_LIMIT:]
+
+    def _normalize_datetime_value(self, value: Any) -> str | None:
+        parsed = self._parse_datetime(value)
+        if parsed is None:
+            return None
+
+        return parsed.isoformat()
+
+    @staticmethod
+    def _parse_datetime(value: Any) -> datetime | None:
+        if not value:
+            return None
+
+        parsed = dt_util.parse_datetime(str(value))
+        if parsed is None:
+            return None
+
+        if parsed.tzinfo is None:
+            return dt_util.as_local(parsed)
+
+        return parsed
+
+    @staticmethod
+    def _to_int(value: Any) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 0

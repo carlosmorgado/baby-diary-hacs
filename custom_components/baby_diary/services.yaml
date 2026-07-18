@@ -24,3 +24,19 @@ log_diaper_change:
       required: false
       selector:
         text:
+toggle_feeding:
+  name: Toggle feeding
+  description: Start a feeding session for a Baby Diary baby, or stop the active feeding session.
+  fields:
+    baby_name:
+      name: Baby name
+      description: Optional Baby Diary baby name or slug. Only needed when tracking multiple babies.
+      required: false
+      selector:
+        text:
+    entry_id:
+      name: Entry ID
+      description: Optional Baby Diary config entry ID. Baby name is preferred for dashboards and automations.
+      required: false
+      selector:
+        text:

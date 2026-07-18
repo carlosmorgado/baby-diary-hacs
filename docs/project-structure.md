@@ -51,9 +51,9 @@ This matters because HACS integration repositories must keep runtime files insid
 | Path | Purpose |
 | --- | --- |
 | `manifest.json` | Home Assistant integration manifest |
-| `services.yaml` | Describes `baby_diary.log_diaper_change` in the UI |
+| `services.yaml` | Describes Baby Diary actions in the UI |
 | `translations/en.json` | Config flow labels and messages |
-| `frontend/baby-diary.js` | Custom card, iconset, and color registry |
+| `frontend/baby-diary.js` | Custom cards, iconset, and color registry |
 | `brand/icon.png` | Brand icon for the installed Home Assistant integration |
 
 ## Python Files

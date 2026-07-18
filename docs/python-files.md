@@ -6,13 +6,13 @@ This page explains what each `.py` file does in the Baby Diary Home Assistant in
 
 ```mermaid
 flowchart TD
-    A["Home Assistant starts"] --> B["__init__.py registers service"]
+    A["Home Assistant starts"] --> B["__init__.py registers actions"]
     C["User adds Baby Diary entry"] --> D["config_flow.py stores baby name"]
     D --> E["__init__.py creates BabyDiaryStore"]
     E --> F["store.py loads persisted counts"]
     E --> G["sensor.py creates sensors"]
     E --> H["button.py creates quick log buttons"]
-    I["Button press or service call"] --> J["store.py updates totals and daily counts"]
+    I["Button press or action call"] --> J["store.py updates counters or feeding sessions"]
     J --> K["Dispatcher signal"]
     K --> L["Sensors write new Home Assistant state"]
 ```
@@ -24,6 +24,7 @@ flowchart TD
 It is responsible for:
 
 - registering the `baby_diary.log_diaper_change` action
+- registering the `baby_diary.toggle_feeding` action
 - loading and unloading config entries
 - creating one `BabyDiaryStore` per baby
 - forwarding each config entry to the `button` and `sensor` platforms
@@ -67,7 +68,7 @@ Examples:
 - integration domain: `baby_diary`
 - supported diaper types: `xixi`, `coco`, `ambos`
 - supported metrics: `diapers`, `xixi`, `coco`
-- service name: `log_diaper_change`
+- service names: `log_diaper_change` and `toggle_feeding`
 - Home Assistant platforms: `button` and `sensor`
 - shared `hass.data` keys
 
@@ -86,6 +87,8 @@ It is responsible for:
 - deleting persisted Baby Diary data when a config entry is removed
 - keeping lifetime totals
 - keeping daily totals
+- starting and stopping feeding sessions
+- keeping daily feeding sessions for the dashboard timeline
 - resetting daily totals after local midnight
 - notifying sensors when values change
 - exposing device information so entities are grouped under one Baby Diary device
@@ -108,6 +111,8 @@ Counting logic lives here:
 
 That is why `ambos` counts as one diaper while still incrementing both xixi and coco.
 
+Feeding logic also lives here. When `toggle_feeding` is called, the store starts a feeding session if none is active. If one is already active, it records the end time, duration, daily feeding count, daily feeding duration, and the session entry used by the feeding dashboard card.
+
 ## `sensor.py`
 
 `custom_components/baby_diary/sensor.py` creates the sensor entities.
@@ -120,8 +125,15 @@ For each baby, it creates:
 - daily diaper total
 - daily xixi total
 - daily coco total
+- lifetime feeding total
+- daily feeding total
+- daily feeding duration
+- last feeding duration
+- current feeding duration
 
 The sensors are not polled. They subscribe to the store's dispatcher signal and write a new Home Assistant state only when the store changes.
+
+The current feeding duration sensor also refreshes once per minute while a feeding is active so the dashboard can show the running duration.
 
 The sensors use:
 
@@ -140,8 +152,11 @@ For each baby, it creates:
 - `Log Xixi`
 - `Log Coco`
 - `Log Ambos`
+- `Toggle Mamada`
 
 Pressing a button calls `BabyDiaryStore.async_log_diaper_change` with the correct diaper type.
+
+The mamada button calls `BabyDiaryStore.async_toggle_feeding`, so the same button starts and stops a feeding session.
 
 These are Home Assistant button entities. They are useful for dashboards, automations, voice helpers, and any Home Assistant feature that can press a button entity.
 
