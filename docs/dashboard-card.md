@@ -26,6 +26,8 @@ The feeding card builds a themed Baby Diary card with:
 - the active feeding session when one is running
 - one button that starts or stops the feeding session
 
+Clicking the timeline opens the Home Assistant more-info/history dialog for the daily feeding sensor. The active feeding duration is refreshed every second in the card and can show seconds, minutes, and hours.
+
 No manual dashboard resource is needed. The integration registers the frontend module when at least one Baby Diary config entry is loaded.
 
 ## Basic Example
