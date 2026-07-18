@@ -211,17 +211,21 @@ class BabyDiaryCurrentFeedingDurationSensor(BabyDiarySensor):
 
 def _feeding_summary_attributes(store: BabyDiaryStore) -> dict[str, Any]:
     return {
+        "duration_seconds": store.daily_feeding_duration_seconds(),
         "duration_minutes": _seconds_to_minutes(store.daily_feeding_duration_seconds()),
+        "last_duration_seconds": store.last_feeding_duration_seconds(),
         "last_duration_minutes": _seconds_to_minutes(
             store.last_feeding_duration_seconds()
         ),
         "active": store.feeding_active,
         "active_started_at": _datetime_to_iso(store.feeding_started_at),
+        "active_duration_seconds": store.feeding_elapsed_seconds(),
         "active_duration_minutes": _seconds_to_minutes(store.feeding_elapsed_seconds()),
         "sessions": [
             {
                 "started_at": session["started_at"],
                 "ended_at": session["ended_at"],
+                "duration_seconds": session["duration_seconds"],
                 "duration_minutes": _seconds_to_minutes(session["duration_seconds"]),
             }
             for session in store.daily_feeding_sessions()
@@ -233,6 +237,7 @@ def _current_feeding_attributes(store: BabyDiaryStore) -> dict[str, Any]:
     return {
         "active": store.feeding_active,
         "started_at": _datetime_to_iso(store.feeding_started_at),
+        "duration_seconds": store.feeding_elapsed_seconds(),
     }
 
 
