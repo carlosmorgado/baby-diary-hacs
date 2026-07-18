@@ -302,7 +302,78 @@ const splitService = (service) => {
   return { domain, action };
 };
 
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const smoothPath = (points) => {
+  if (points.length === 0) {
+    return "";
+  }
+
+  return points
+    .slice(1)
+    .reduce((path, point, index) => {
+      const previous = points[index];
+      const middleX = (previous.x + point.x) / 2;
+
+      return `${path} C ${middleX} ${previous.y}, ${middleX} ${point.y}, ${point.x} ${point.y}`;
+    }, `M ${points[0].x} ${points[0].y}`);
+};
+
+const areaPath = (points) => {
+  if (points.length === 0) {
+    return "";
+  }
+
+  const line = smoothPath(points);
+  const first = points[0];
+  const last = points[points.length - 1];
+
+  return `${line} L ${last.x} 100 L ${first.x} 100 Z`;
+};
+
+const formatSvgPoints = (points) =>
+  points.map((point) => `${point.x},${point.y}`).join(" ");
+
+const chartTemplate = ({ points, color, id, className = "" }) => `
+  <svg
+    class="soft-chart ${className}"
+    viewBox="0 0 100 100"
+    preserveAspectRatio="none"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <defs>
+      <linearGradient id="${id}-fill" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stop-color="${color}" stop-opacity="0.38"></stop>
+        <stop offset="58%" stop-color="${color}" stop-opacity="0.16"></stop>
+        <stop offset="100%" stop-color="${color}" stop-opacity="0"></stop>
+      </linearGradient>
+      <filter id="${id}-glow" x="-10%" y="-35%" width="120%" height="170%">
+        <feGaussianBlur stdDeviation="1.3" result="blur"></feGaussianBlur>
+        <feMerge>
+          <feMergeNode in="blur"></feMergeNode>
+          <feMergeNode in="SourceGraphic"></feMergeNode>
+        </feMerge>
+      </filter>
+    </defs>
+    <path class="soft-chart-fill" d="${areaPath(points)}" fill="url(#${id}-fill)"></path>
+    <path
+      class="soft-chart-line"
+      d="${smoothPath(points)}"
+      fill="none"
+      stroke="${color}"
+      filter="url(#${id}-glow)"
+      pathLength="1"
+    ></path>
+  </svg>
+`;
+
 class BabyDiaryDiaperCard extends HTMLElement {
+  constructor() {
+    super();
+    this._chartId = `baby-diaper-${Math.random().toString(36).slice(2)}`;
+  }
+
   setConfig(config) {
     this._config = {
       service: "baby_diary.log_diaper_change",
@@ -459,13 +530,14 @@ class BabyDiaryDiaperCard extends HTMLElement {
   }
 
   _metricTemplate({ label, icon, color, count, detail, entityId, maxCount, primary = false }) {
-    const progress = count <= 0 ? 0 : Math.max(8, Math.min(100, (count / maxCount) * 100));
+    const ratio = count <= 0 ? 0 : clamp(count / maxCount, 0.08, 1);
+    const chartId = `${this._chartId}-${slugify(label)}-${count}`;
 
     return `
       <button
         class="metric ${primary ? "primary" : ""}"
         type="button"
-        style="--accent:${color};--progress:${progress}%"
+        style="--accent:${color}"
         data-open-history
         data-entity-id="${escapeHtml(entityId)}"
         title="Abrir histórico de ${escapeHtml(label)}"
@@ -477,11 +549,42 @@ class BabyDiaryDiaperCard extends HTMLElement {
         <span class="metric-count">${count}</span>
         <span class="metric-detail">${escapeHtml(detail)}</span>
         <span class="today-chart" aria-hidden="true">
-          <span class="today-chart-fill"></span>
-          <span class="today-chart-line"></span>
+          ${chartTemplate({
+            points: this._metricChartPoints(ratio, primary),
+            color,
+            id: chartId,
+            className: primary ? "primary-chart" : ""
+          })}
         </span>
       </button>
     `;
+  }
+
+  _metricChartPoints(ratio, primary) {
+    if (ratio <= 0) {
+      return [
+        { x: 0, y: 84 },
+        { x: 22, y: 84 },
+        { x: 44, y: 84 },
+        { x: 68, y: 84 },
+        { x: 100, y: 84 }
+      ];
+    }
+
+    const end = primary ? 78 - ratio * 42 : 82 - ratio * 46;
+    const start = primary ? end + 14 : end + 20;
+    const dip = primary ? start + 10 : start + 7;
+    const lift = primary ? end - 3 : end - 7;
+
+    return [
+      { x: 0, y: clamp(start, 18, 90) },
+      { x: 12, y: clamp(start - 5, 18, 90) },
+      { x: 25, y: clamp(dip, 20, 92) },
+      { x: 38, y: clamp(end + 7, 16, 88) },
+      { x: 56, y: clamp(end + 3, 14, 86) },
+      { x: 74, y: clamp(end, 12, 84) },
+      { x: 100, y: clamp(lift, 10, 82) }
+    ];
   }
 
   _actionTemplate(name, icon, color, type) {
@@ -559,10 +662,15 @@ class BabyDiaryDiaperCard extends HTMLElement {
 
         baby-diary-diaper-card .metric {
           background:
+            radial-gradient(
+              circle at 78% 8%,
+              color-mix(in srgb, var(--accent) 16%, transparent),
+              transparent 36%
+            ),
             linear-gradient(
               180deg,
-              color-mix(in srgb, var(--accent) 10%, transparent),
-              color-mix(in srgb, var(--accent) 5%, transparent)
+              color-mix(in srgb, var(--accent) 8%, transparent),
+              color-mix(in srgb, var(--accent) 3%, transparent)
             ),
             color-mix(in srgb, var(--ha-card-background, var(--card-background-color)) 88%, transparent);
           border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--divider-color));
@@ -618,38 +726,53 @@ class BabyDiaryDiaperCard extends HTMLElement {
 
         baby-diary-diaper-card .today-chart {
           align-self: end;
-          background: color-mix(in srgb, var(--secondary-text-color) 12%, transparent);
-          border-radius: 999px;
           display: block;
-          height: 34px;
-          margin-top: 10px;
+          height: 54px;
+          margin-top: 4px;
           overflow: hidden;
           position: relative;
           width: 100%;
         }
 
-        baby-diary-diaper-card .today-chart-fill {
-          background: linear-gradient(
-            90deg,
-            color-mix(in srgb, var(--accent) 34%, transparent),
-            color-mix(in srgb, var(--accent) 12%, transparent)
-          );
-          bottom: 0;
-          left: 0;
-          position: absolute;
-          top: 0;
-          width: var(--progress);
+        baby-diary-diaper-card .metric.primary .today-chart {
+          height: 68px;
         }
 
-        baby-diary-diaper-card .today-chart-line {
-          background: var(--accent);
-          border-radius: 999px;
-          bottom: 0;
-          box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 22%, transparent);
-          height: 3px;
+        baby-diary-diaper-card .soft-chart {
+          bottom: -7px;
+          display: block;
+          height: calc(100% + 14px);
+          left: 0;
+          overflow: hidden;
+          position: absolute;
+          right: 0;
+          width: 100%;
+        }
+
+        baby-diary-diaper-card .soft-chart-line {
+          stroke-linecap: round;
+          stroke-linejoin: round;
+          stroke-width: 4;
+        }
+
+        baby-diary-diaper-card .soft-chart-fill {
+          opacity: 0.95;
+        }
+
+        baby-diary-diaper-card .today-chart::after {
+          background: linear-gradient(
+            90deg,
+            transparent,
+            color-mix(in srgb, var(--primary-text-color) 14%, transparent),
+            transparent
+          );
+          bottom: 11px;
+          content: "";
+          height: 1px;
           left: 0;
           position: absolute;
-          width: var(--progress);
+          display: block;
+          right: 0;
         }
 
         baby-diary-diaper-card .actions {
@@ -769,6 +892,7 @@ class BabyDiaryFeedingCard extends HTMLElement {
   constructor() {
     super();
     this._activeTimer = undefined;
+    this._chartId = `baby-feeding-${Math.random().toString(36).slice(2)}`;
   }
 
   setConfig(config) {
@@ -900,31 +1024,22 @@ class BabyDiaryFeedingCard extends HTMLElement {
   }
 
   _sessionChart(sessions) {
-    if (sessions.length === 0) {
-      return `
-        <div class="empty-chart">
-          <div class="chart-line"></div>
-        </div>
-      `;
-    }
-
     const maxDuration = Math.max(
       ...sessions.map((session) => session.durationSeconds),
       1
     );
     const bars = this._layoutSessions(sessions)
       .map((session) => {
-        const width = Math.min(100, Math.max(2.6, (session.durationSeconds / 86400) * 100));
-        const left = Math.min(100 - width, Math.max(0, session.visualLeft));
-        const height = 28 + (session.durationSeconds / maxDuration) * 54;
+        const left = clamp(session.visualLeft, 2, 98);
+        const top = clamp(82 - (session.durationSeconds / maxDuration) * 58, 18, 82);
         const label = `${formatTime(this._hass, session.startedAt)} · ${formatDurationPrecise(
           session.durationSeconds
         )}`;
 
         return `
           <div
-            class="session ${session.active ? "active" : ""}"
-            style="left:${left}%;width:${width}%;height:${height}px"
+            class="session-marker ${session.active ? "active" : ""}"
+            style="--x:${left}%;--y:${top}%"
             title="${label}"
           ></div>
         `;
@@ -933,6 +1048,12 @@ class BabyDiaryFeedingCard extends HTMLElement {
 
     return `
       <div class="chart-line"></div>
+      ${chartTemplate({
+        points: this._sessionTrendPoints(sessions),
+        color: COLORS.mamada,
+        id: `${this._chartId}-timeline`,
+        className: "feeding-chart"
+      })}
       <div class="axis-label start">00:00</div>
       <div class="axis-label end">24:00</div>
       ${bars}
@@ -1018,6 +1139,40 @@ class BabyDiaryFeedingCard extends HTMLElement {
         };
       });
     });
+  }
+
+  _sessionTrendPoints(sessions) {
+    if (sessions.length === 0) {
+      return [
+        { x: 0, y: 84 },
+        { x: 25, y: 84 },
+        { x: 50, y: 84 },
+        { x: 75, y: 84 },
+        { x: 100, y: 84 }
+      ];
+    }
+
+    const maxDuration = Math.max(
+      ...sessions.map((session) => session.durationSeconds),
+      1
+    );
+    const sessionPoints = [...sessions]
+      .sort((left, right) => left.startSecond - right.startSecond)
+      .map((session, index) => {
+        const x = clamp((session.startSecond / 86400) * 100 + index * 0.2, 0, 100);
+        const intensity = session.durationSeconds / maxDuration;
+        const y = clamp(82 - intensity * 58, 18, 82);
+
+        return { x, y };
+      });
+    const first = sessionPoints[0];
+    const last = sessionPoints[sessionPoints.length - 1];
+
+    return [
+      { x: 0, y: clamp(first.y + 28, 64, 88) },
+      ...sessionPoints,
+      { x: 100, y: clamp(last.y + 16, 54, 86) }
+    ];
   }
 
   _feedingStats(sessions) {
@@ -1269,9 +1424,18 @@ class BabyDiaryFeedingCard extends HTMLElement {
 
         baby-diary-feeding-card .timeline {
           cursor: pointer;
-          height: 118px;
+          background:
+            radial-gradient(
+              circle at 82% 8%,
+              color-mix(in srgb, ${COLORS.mamada} 18%, transparent),
+              transparent 38%
+            ),
+            color-mix(in srgb, var(--primary-text-color) 3%, transparent);
+          border-radius: 12px;
+          height: 132px;
           margin: 16px 0 14px;
           outline: none;
+          overflow: hidden;
           position: relative;
         }
 
@@ -1281,17 +1445,17 @@ class BabyDiaryFeedingCard extends HTMLElement {
         }
 
         baby-diary-feeding-card .chart-line {
-          background: color-mix(in srgb, var(--secondary-text-color) 18%, transparent);
+          background: linear-gradient(
+            90deg,
+            transparent,
+            color-mix(in srgb, var(--primary-text-color) 14%, transparent),
+            transparent
+          );
           bottom: 32px;
           height: 1px;
-          left: 0;
+          left: 14px;
           position: absolute;
-          right: 0;
-        }
-
-        baby-diary-feeding-card .empty-chart {
-          height: 100%;
-          position: relative;
+          right: 14px;
         }
 
         baby-diary-feeding-card .axis-label {
@@ -1301,25 +1465,62 @@ class BabyDiaryFeedingCard extends HTMLElement {
           position: absolute;
         }
 
-        baby-diary-feeding-card .axis-label.end {
-          right: 0;
+        baby-diary-feeding-card .axis-label.start {
+          left: 14px;
         }
 
-        baby-diary-feeding-card .session {
+        baby-diary-feeding-card .axis-label.end {
+          right: 14px;
+        }
+
+        baby-diary-feeding-card .soft-chart {
+          bottom: 16px;
+          display: block;
+          height: calc(100% - 26px);
+          left: 10px;
+          position: absolute;
+          right: 10px;
+          width: calc(100% - 20px);
+        }
+
+        baby-diary-feeding-card .soft-chart-line {
+          stroke-linecap: round;
+          stroke-linejoin: round;
+          stroke-width: 4;
+        }
+
+        baby-diary-feeding-card .session-marker {
+          background: ${COLORS.mamada};
+          border: 1px solid color-mix(in srgb, ${COLORS.mamada} 70%, var(--primary-text-color));
+          border-radius: 999px;
+          box-shadow: 0 0 12px color-mix(in srgb, ${COLORS.mamada} 36%, transparent);
+          height: 7px;
+          left: var(--x);
+          position: absolute;
+          top: var(--y);
+          transform: translate(-50%, -50%);
+          width: 7px;
+        }
+
+        baby-diary-feeding-card .session-marker::after {
           background: linear-gradient(
             180deg,
-            color-mix(in srgb, ${COLORS.mamada} 78%, var(--primary-text-color) 8%),
-            color-mix(in srgb, ${COLORS.mamada} 34%, transparent)
+            color-mix(in srgb, ${COLORS.mamada} 36%, transparent),
+            transparent
           );
-          border: 1px solid color-mix(in srgb, ${COLORS.mamada} 62%, transparent);
-          border-radius: 999px 999px 5px 5px;
-          bottom: 32px;
-          min-width: 14px;
+          content: "";
+          height: 34px;
+          left: 50%;
           position: absolute;
+          top: 7px;
+          transform: translateX(-50%);
+          width: 1px;
         }
 
-        baby-diary-feeding-card .session.active {
-          box-shadow: 0 0 0 3px color-mix(in srgb, ${COLORS.mamada} 18%, transparent);
+        baby-diary-feeding-card .session-marker.active {
+          box-shadow:
+            0 0 0 4px color-mix(in srgb, ${COLORS.mamada} 18%, transparent),
+            0 0 16px color-mix(in srgb, ${COLORS.mamada} 46%, transparent);
         }
 
         baby-diary-feeding-card .toggle {
