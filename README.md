@@ -161,6 +161,8 @@ That file is necessary because Home Assistant needs browser-side JavaScript to r
 - the `baby:` custom iconset
 - `window.babyDiaryHacs.colors`
 
+The integration serves that file from `/baby_diary/baby-diary.js`, adds it as a Lovelace module resource in storage-mode dashboards, and also exposes it as an extra frontend module. The Lovelace resource makes custom cards load before dashboards render; the extra module keeps the iconset available as a fallback.
+
 The icons and colors live in that frontend module so the integration has one runtime source of truth. A root `assets/` folder would not be a reliable runtime source for a HACS integration install, and keeping separate SVG/CSS copies created duplication.
 
 ## Brand Icons

@@ -59,7 +59,7 @@ window.customIconsets = window.customIconsets || {};
 window.customIconsets.baby = getIcon;
 
 window.babyDiaryHacs = Object.freeze({
-  version: "0.4.1",
+  version: "0.4.2",
   iconPrefix: "baby",
   colors: COLORS,
   icons: Object.freeze(Object.keys(ICONS))
@@ -389,7 +389,7 @@ class BabyDiaryDiaperCard extends HTMLElement {
     const entities = resolved.entities;
     const service = this._config.service || "baby_diary.log_diaper_change";
 
-    return {
+    const cardConfig = {
       type: "grid",
       columns: 1,
       square: false,
@@ -444,12 +444,14 @@ class BabyDiaryDiaperCard extends HTMLElement {
           ]
         }
       ],
-      column_span: this._config.column_span || 1,
-      background: this._config.background || {
-        color: "primary",
-        opacity: 20
-      }
+      column_span: this._config.column_span || 1
     };
+
+    if (this._config.background) {
+      cardConfig.background = this._config.background;
+    }
+
+    return cardConfig;
   }
 
   _resolveDiaperEntities() {

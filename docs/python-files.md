@@ -30,6 +30,7 @@ It is responsible for:
 - forwarding each config entry to the `button` and `sensor` platforms
 - registering the frontend JavaScript file as a static Home Assistant path
 - loading the frontend module into the browser with `add_extra_js_url`
+- registering the frontend module as a Lovelace dashboard resource in storage mode
 - routing service calls to the correct baby
 
 It keeps shared runtime objects in `hass.data[DOMAIN]`. This is the usual Home Assistant pattern for integration state that needs to be shared between platforms.
@@ -38,11 +39,12 @@ Important helper functions:
 
 | Function | Purpose |
 | --- | --- |
-| `async_setup` | Runs once for the integration and registers the service |
+| `async_setup` | Runs once for the integration, registers the services, and registers the frontend module |
 | `async_setup_entry` | Runs for each configured baby |
 | `async_unload_entry` | Cleans up one configured baby |
 | `async_remove_entry` | Deletes persisted Baby Diary storage when a baby entry is removed |
 | `_async_register_frontend` | Serves and loads `frontend/baby-diary.js` |
+| `_async_register_lovelace_resource` | Adds or updates the storage-mode dashboard resource for the custom cards |
 | `_get_store_for_service` | Finds the correct baby store from `entry_id`, `baby_name`, or the single configured entry |
 
 ## `config_flow.py`

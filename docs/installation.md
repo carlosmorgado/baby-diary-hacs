@@ -54,6 +54,8 @@ The counters are stored in Home Assistant's `.storage` directory and are not rep
 
 Backend changes, such as sensors, units, services, storage, or config flows, need a Home Assistant restart so Python code is loaded again. Frontend-only card/icon changes usually only need the HACS download plus a hard browser refresh, as long as Home Assistant is already serving the Baby Diary frontend module.
 
+The integration also keeps `/baby_diary/baby-diary.js?v=<version>` registered as a Lovelace module resource. That helps Home Assistant load the custom card before dashboards render and reduces intermittent `custom element does not exist` errors after updates.
+
 ## Removing
 
 Use this order when you want a clean uninstall:
