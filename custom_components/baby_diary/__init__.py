@@ -47,6 +47,7 @@ LEGACY_FRONTEND_MODULE_URLS = (
     f"{FRONTEND_URL}?v=0.3.6",
     f"{FRONTEND_URL}?v=0.3.7",
     f"{FRONTEND_URL}?v=0.4.0",
+    f"{FRONTEND_URL}?v=0.4.1",
 )
 
 LOG_DIAPER_SCHEMA = vol.Schema(
@@ -68,6 +69,7 @@ ROUTE_TO_BABY_SCHEMA = vol.Schema(
 async def async_setup(hass: HomeAssistant, _config: ConfigType) -> bool:
     """Set up Baby Diary."""
     _ensure_domain_data(hass)
+    await _async_register_frontend(hass)
 
     async def handle_log_diaper_change(call: ServiceCall) -> None:
         store = _get_store_for_service(hass, call)
@@ -163,18 +165,57 @@ def _ensure_domain_data(hass: HomeAssistant) -> None:
 async def _async_register_frontend(hass: HomeAssistant) -> None:
     _async_remove_frontend_urls(hass, LEGACY_FRONTEND_MODULE_URLS)
 
-    if hass.data[DOMAIN].get(DATA_FRONTEND_REGISTERED):
+    if not hass.data[DOMAIN].get(DATA_FRONTEND_REGISTERED):
+        if not FRONTEND_FILE.exists():
+            _LOGGER.warning("Baby Diary frontend file was not found: %s", FRONTEND_FILE)
+            return
+
+        with suppress(RuntimeError):
+            await hass.http.async_register_static_paths(
+                [StaticPathConfig(FRONTEND_URL, str(FRONTEND_FILE), False)]
+            )
+        add_extra_js_url(hass, FRONTEND_MODULE_URL)
+        hass.data[DOMAIN][DATA_FRONTEND_REGISTERED] = True
+
+    await _async_register_lovelace_resource(hass)
+
+
+async def _async_register_lovelace_resource(hass: HomeAssistant) -> None:
+    """Register the card module as a dashboard resource in storage mode."""
+    lovelace = hass.data.get("lovelace")
+    resources = getattr(lovelace, "resources", None)
+
+    if resources is None or getattr(lovelace, "mode", None) != "storage":
         return
 
-    if not FRONTEND_FILE.exists():
-        _LOGGER.warning("Baby Diary frontend file was not found: %s", FRONTEND_FILE)
+    if not getattr(resources, "loaded", False):
+        await resources.async_load()
+
+    matches = [
+        resource
+        for resource in resources.async_items()
+        if _frontend_resource_path(resource.get("url", "")) == FRONTEND_URL
+    ]
+
+    if not matches:
+        await resources.async_create_item(
+            {"res_type": "module", "url": FRONTEND_MODULE_URL}
+        )
         return
 
-    await hass.http.async_register_static_paths(
-        [StaticPathConfig(FRONTEND_URL, str(FRONTEND_FILE), False)]
-    )
-    add_extra_js_url(hass, FRONTEND_MODULE_URL)
-    hass.data[DOMAIN][DATA_FRONTEND_REGISTERED] = True
+    primary, *duplicates = matches
+    if primary.get("url") != FRONTEND_MODULE_URL or primary.get("res_type") != "module":
+        await resources.async_update_item(
+            primary["id"], {"res_type": "module", "url": FRONTEND_MODULE_URL}
+        )
+
+    for duplicate in duplicates:
+        await resources.async_delete_item(duplicate["id"])
+
+
+def _frontend_resource_path(frontend_url: str) -> str:
+    """Return a frontend resource URL without its query string."""
+    return frontend_url.split("?", 1)[0]
 
 
 def _async_remove_frontend(hass: HomeAssistant) -> None:
