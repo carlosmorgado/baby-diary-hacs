@@ -48,6 +48,7 @@ LEGACY_FRONTEND_MODULE_URLS = (
     f"{FRONTEND_URL}?v=0.3.7",
     f"{FRONTEND_URL}?v=0.4.0",
     f"{FRONTEND_URL}?v=0.4.1",
+    f"{FRONTEND_URL}?v=0.4.2",
 )
 
 LOG_DIAPER_SCHEMA = vol.Schema(
@@ -177,15 +178,19 @@ async def _async_register_frontend(hass: HomeAssistant) -> None:
         add_extra_js_url(hass, FRONTEND_MODULE_URL)
         hass.data[DOMAIN][DATA_FRONTEND_REGISTERED] = True
 
-    await _async_register_lovelace_resource(hass)
+    try:
+        await _async_register_lovelace_resource(hass)
+    except (KeyError, ValueError, TypeError, AttributeError):
+        _LOGGER.exception("Unable to register Baby Diary Lovelace resource")
 
 
 async def _async_register_lovelace_resource(hass: HomeAssistant) -> None:
     """Register the card module as a dashboard resource in storage mode."""
     lovelace = hass.data.get("lovelace")
     resources = getattr(lovelace, "resources", None)
+    resource_mode = getattr(lovelace, "resource_mode", getattr(lovelace, "mode", None))
 
-    if resources is None or getattr(lovelace, "mode", None) != "storage":
+    if resources is None or _resource_mode_value(resource_mode) != "storage":
         return
 
     if not getattr(resources, "loaded", False):
@@ -216,6 +221,11 @@ async def _async_register_lovelace_resource(hass: HomeAssistant) -> None:
 def _frontend_resource_path(frontend_url: str) -> str:
     """Return a frontend resource URL without its query string."""
     return frontend_url.split("?", 1)[0]
+
+
+def _resource_mode_value(resource_mode: object) -> object:
+    """Return the string value from Home Assistant's Lovelace resource mode."""
+    return getattr(resource_mode, "value", resource_mode)
 
 
 def _async_remove_frontend(hass: HomeAssistant) -> None:

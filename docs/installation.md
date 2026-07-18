@@ -56,6 +56,8 @@ Backend changes, such as sensors, units, services, storage, or config flows, nee
 
 The integration also keeps `/baby_diary/baby-diary.js?v=<version>` registered as a Lovelace module resource. That helps Home Assistant load the custom card before dashboards render and reduces intermittent `custom element does not exist` errors after updates.
 
+Home Assistant versions before and after the Lovelace `resource_mode` change are supported. This matters on newer Home Assistant releases because the old `mode` field is no longer the reliable way to detect storage-mode resources.
+
 ## Removing
 
 Use this order when you want a clean uninstall:

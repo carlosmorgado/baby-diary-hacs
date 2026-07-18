@@ -59,7 +59,7 @@ window.customIconsets = window.customIconsets || {};
 window.customIconsets.baby = getIcon;
 
 window.babyDiaryHacs = Object.freeze({
-  version: "0.4.2",
+  version: "0.4.3",
   iconPrefix: "baby",
   colors: COLORS,
   icons: Object.freeze(Object.keys(ICONS))
@@ -573,7 +573,6 @@ class BabyDiaryDiaperCard extends HTMLElement {
 class BabyDiaryFeedingCard extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
     this._activeTimer = undefined;
   }
 
@@ -622,16 +621,16 @@ class BabyDiaryFeedingCard extends HTMLElement {
         ? this._missingTemplate(resolved)
         : this._cardTemplate(resolved.entities);
 
-    this.shadowRoot.innerHTML = `${this._styles()}${content}`;
-    this.shadowRoot
+    this.innerHTML = `${this._styles()}${content}`;
+    this
       .querySelector("[data-toggle-feeding]")
       ?.addEventListener("click", () => this._toggleFeeding());
-    this.shadowRoot
+    this
       .querySelector("[data-open-history]")
       ?.addEventListener("click", (event) =>
         this._openMoreInfo(event.currentTarget.dataset.entityId)
       );
-    this.shadowRoot
+    this
       .querySelector("[data-open-history]")
       ?.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -931,27 +930,27 @@ class BabyDiaryFeedingCard extends HTMLElement {
   _styles() {
     return `
       <style>
-        :host {
+        baby-diary-feeding-card {
           display: block;
         }
 
-        ha-card {
+        baby-diary-feeding-card ha-card {
           overflow: hidden;
         }
 
-        .baby-feeding {
+        baby-diary-feeding-card .baby-feeding {
           color: var(--primary-text-color);
           padding: 18px;
         }
 
-        .header {
+        baby-diary-feeding-card .header {
           align-items: flex-start;
           display: flex;
           gap: 16px;
           justify-content: space-between;
         }
 
-        .eyebrow {
+        baby-diary-feeding-card .eyebrow {
           align-items: center;
           color: var(--secondary-text-color);
           display: flex;
@@ -959,27 +958,27 @@ class BabyDiaryFeedingCard extends HTMLElement {
           gap: 8px;
         }
 
-        .eyebrow ha-icon {
+        baby-diary-feeding-card .eyebrow ha-icon {
           color: ${COLORS.mamada};
           height: 22px;
           width: 22px;
         }
 
-        .total {
+        baby-diary-feeding-card .total {
           font-size: 42px;
           font-weight: 800;
           line-height: 1;
           margin-top: 14px;
         }
 
-        .subtitle {
+        baby-diary-feeding-card .subtitle {
           color: var(--secondary-text-color);
           font-size: 14px;
           margin-top: 6px;
         }
 
-        .status {
-          background: color-mix(in srgb, var(--secondary-background-color) 70%, transparent);
+        baby-diary-feeding-card .status {
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border: 1px solid var(--divider-color);
           border-radius: 999px;
           color: var(--secondary-text-color);
@@ -990,13 +989,13 @@ class BabyDiaryFeedingCard extends HTMLElement {
           text-transform: uppercase;
         }
 
-        .status.active {
+        baby-diary-feeding-card .status.active {
           background: color-mix(in srgb, ${COLORS.mamada} 18%, transparent);
           border-color: color-mix(in srgb, ${COLORS.mamada} 65%, transparent);
           color: ${COLORS.mamada};
         }
 
-        .timeline {
+        baby-diary-feeding-card .timeline {
           cursor: pointer;
           height: 150px;
           margin: 18px 0 14px;
@@ -1004,12 +1003,12 @@ class BabyDiaryFeedingCard extends HTMLElement {
           position: relative;
         }
 
-        .timeline:focus-visible {
+        baby-diary-feeding-card .timeline:focus-visible {
           border-radius: 12px;
           box-shadow: 0 0 0 2px color-mix(in srgb, ${COLORS.mamada} 70%, transparent);
         }
 
-        .chart-line {
+        baby-diary-feeding-card .chart-line {
           background: color-mix(in srgb, var(--secondary-text-color) 18%, transparent);
           bottom: 32px;
           height: 1px;
@@ -1018,23 +1017,23 @@ class BabyDiaryFeedingCard extends HTMLElement {
           right: 0;
         }
 
-        .empty-chart {
+        baby-diary-feeding-card .empty-chart {
           height: 100%;
           position: relative;
         }
 
-        .axis-label {
+        baby-diary-feeding-card .axis-label {
           bottom: 2px;
           color: var(--secondary-text-color);
           font-size: 11px;
           position: absolute;
         }
 
-        .axis-label.end {
+        baby-diary-feeding-card .axis-label.end {
           right: 0;
         }
 
-        .session {
+        baby-diary-feeding-card .session {
           background: linear-gradient(
             180deg,
             color-mix(in srgb, ${COLORS.mamada} 88%, white 12%),
@@ -1047,11 +1046,11 @@ class BabyDiaryFeedingCard extends HTMLElement {
           position: absolute;
         }
 
-        .session.active {
+        baby-diary-feeding-card .session.active {
           box-shadow: 0 0 0 3px color-mix(in srgb, ${COLORS.mamada} 20%, transparent);
         }
 
-        .session span {
+        baby-diary-feeding-card .session span {
           background: color-mix(
             in srgb,
             ${COLORS.mamada} 72%,
@@ -1069,7 +1068,7 @@ class BabyDiaryFeedingCard extends HTMLElement {
           white-space: nowrap;
         }
 
-        .toggle {
+        baby-diary-feeding-card .toggle {
           align-items: center;
           background: color-mix(
             in srgb,
@@ -1088,7 +1087,7 @@ class BabyDiaryFeedingCard extends HTMLElement {
           width: 100%;
         }
 
-        .toggle.active {
+        baby-diary-feeding-card .toggle.active {
           background: color-mix(
             in srgb,
             ${COLORS.mamada} 34%,
@@ -1096,37 +1095,37 @@ class BabyDiaryFeedingCard extends HTMLElement {
           );
         }
 
-        .toggle ha-icon {
+        baby-diary-feeding-card .toggle ha-icon {
           color: ${COLORS.mamada};
           height: 36px;
           width: 36px;
         }
 
-        .toggle-text {
+        baby-diary-feeding-card .toggle-text {
           display: grid;
           gap: 4px;
         }
 
-        .toggle-text strong {
+        baby-diary-feeding-card .toggle-text strong {
           font-size: 18px;
           line-height: 1.1;
         }
 
-        .toggle-text small {
+        baby-diary-feeding-card .toggle-text small {
           color: var(--secondary-text-color);
           font-size: 13px;
         }
 
-        .missing h3 {
+        baby-diary-feeding-card .missing h3 {
           margin: 0 0 8px;
         }
 
-        .missing p,
-        .missing li {
+        baby-diary-feeding-card .missing p,
+        baby-diary-feeding-card .missing li {
           color: var(--secondary-text-color);
         }
 
-        .missing code {
+        baby-diary-feeding-card .missing code {
           color: var(--primary-text-color);
         }
       </style>
