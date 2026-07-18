@@ -127,7 +127,7 @@ entry_id: 01J2EXAMPLEENTRYID
 
 The diaper card wraps native Home Assistant `tile`, `grid`, and `button` cards. It uses nested grids so the diaper tile spans the full card width, xixi and coco sit side by side, and the three logging buttons share the full card width. The wrapper resolves Baby Diary's generated entity IDs before passing them into the native cards, which avoids broken `Entity not found` tiles when Home Assistant creates longer entity IDs.
 
-The feeding card uses one `ha-card` and the active Home Assistant theme. It reads the daily feeding sensor's `sessions` attribute to draw the timeline, so the chart can show both when feedings happened and how long each feeding lasted.
+The feeding card uses one `ha-card` and the active Home Assistant theme. It renders that `ha-card` in light DOM so normal Home Assistant theme and card-mod rules can style the card surface. It reads the daily feeding sensor's `sessions` attribute to draw the timeline, so the chart can show both when feedings happened and how long each feeding lasted.
 
 ## Entity Not Found
 

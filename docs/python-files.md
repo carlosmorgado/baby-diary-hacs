@@ -45,6 +45,7 @@ Important helper functions:
 | `async_remove_entry` | Deletes persisted Baby Diary storage when a baby entry is removed |
 | `_async_register_frontend` | Serves and loads `frontend/baby-diary.js` |
 | `_async_register_lovelace_resource` | Adds or updates the storage-mode dashboard resource for the custom cards |
+| `_resource_mode_value` | Normalizes Lovelace `mode`/`resource_mode` values across Home Assistant versions |
 | `_get_store_for_service` | Finds the correct baby store from `entry_id`, `baby_name`, or the single configured entry |
 
 ## `config_flow.py`
