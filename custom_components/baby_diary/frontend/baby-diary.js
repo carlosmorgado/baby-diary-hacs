@@ -561,29 +561,28 @@ class BabyDiaryDiaperCard extends HTMLElement {
   }
 
   _metricChartPoints(ratio, primary) {
+    const baseline = primary ? 88 : 90;
+
     if (ratio <= 0) {
       return [
-        { x: 0, y: 84 },
-        { x: 22, y: 84 },
-        { x: 44, y: 84 },
-        { x: 68, y: 84 },
-        { x: 100, y: 84 }
+        { x: 0, y: baseline },
+        { x: 32, y: baseline },
+        { x: 66, y: baseline },
+        { x: 100, y: baseline }
       ];
     }
 
-    const end = primary ? 78 - ratio * 42 : 82 - ratio * 46;
-    const start = primary ? end + 14 : end + 20;
-    const dip = primary ? start + 10 : start + 7;
-    const lift = primary ? end - 3 : end - 7;
+    const target = primary ? 78 - ratio * 42 : 82 - ratio * 46;
+    const shoulder = primary ? target + 10 : target + 12;
 
     return [
-      { x: 0, y: clamp(start, 18, 90) },
-      { x: 12, y: clamp(start - 5, 18, 90) },
-      { x: 25, y: clamp(dip, 20, 92) },
-      { x: 38, y: clamp(end + 7, 16, 88) },
-      { x: 56, y: clamp(end + 3, 14, 86) },
-      { x: 74, y: clamp(end, 12, 84) },
-      { x: 100, y: clamp(lift, 10, 82) }
+      { x: 0, y: baseline },
+      { x: 12, y: baseline },
+      { x: 24, y: clamp(baseline - 2, 18, baseline) },
+      { x: 36, y: clamp(shoulder, 16, 88) },
+      { x: 54, y: clamp(target + 5, 14, 86) },
+      { x: 74, y: clamp(target + 2, 12, 84) },
+      { x: 100, y: clamp(target, 10, 82) }
     ];
   }
 
@@ -1490,37 +1489,23 @@ class BabyDiaryFeedingCard extends HTMLElement {
         }
 
         baby-diary-feeding-card .session-marker {
-          background: ${COLORS.mamada};
-          border: 1px solid color-mix(in srgb, ${COLORS.mamada} 70%, var(--primary-text-color));
+          background: color-mix(in srgb, ${COLORS.mamada} 84%, var(--primary-text-color) 8%);
+          border: 1px solid color-mix(in srgb, ${COLORS.mamada} 62%, transparent);
           border-radius: 999px;
-          box-shadow: 0 0 12px color-mix(in srgb, ${COLORS.mamada} 36%, transparent);
-          height: 7px;
+          box-shadow: 0 0 8px color-mix(in srgb, ${COLORS.mamada} 24%, transparent);
+          height: 6px;
           left: var(--x);
+          opacity: 0.9;
           position: absolute;
           top: var(--y);
           transform: translate(-50%, -50%);
-          width: 7px;
-        }
-
-        baby-diary-feeding-card .session-marker::after {
-          background: linear-gradient(
-            180deg,
-            color-mix(in srgb, ${COLORS.mamada} 36%, transparent),
-            transparent
-          );
-          content: "";
-          height: 34px;
-          left: 50%;
-          position: absolute;
-          top: 7px;
-          transform: translateX(-50%);
-          width: 1px;
+          width: 6px;
+          z-index: 2;
         }
 
         baby-diary-feeding-card .session-marker.active {
-          box-shadow:
-            0 0 0 4px color-mix(in srgb, ${COLORS.mamada} 18%, transparent),
-            0 0 16px color-mix(in srgb, ${COLORS.mamada} 46%, transparent);
+          box-shadow: 0 0 0 4px color-mix(in srgb, ${COLORS.mamada} 16%, transparent);
+          opacity: 1;
         }
 
         baby-diary-feeding-card .toggle {
