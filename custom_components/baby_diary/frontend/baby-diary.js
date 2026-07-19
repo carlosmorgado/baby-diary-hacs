@@ -522,12 +522,6 @@ class BabyDiaryDiaperCard extends HTMLElement {
       <ha-card>
         <div class="baby-diaper">
           ${this._overviewTemplate(series, maxCount)}
-
-          <section class="actions" aria-label="Registar fralda">
-            ${this._actionTemplate("Xixi", "baby:xixi", COLORS.xixi, "xixi")}
-            ${this._actionTemplate("Cocó", "baby:coco", COLORS.coco, "coco")}
-            ${this._actionTemplate("Ambos", "baby:ambos", COLORS.ambos, "ambos")}
-          </section>
         </div>
       </ha-card>
     `;
@@ -645,6 +639,11 @@ class BabyDiaryDiaperCard extends HTMLElement {
             id: chartId
           })}
         </button>
+        <section class="actions" aria-label="Registar fralda">
+          ${this._actionTemplate("Xixi", "baby:xixi", COLORS.xixi, "xixi")}
+          ${this._actionTemplate("Cocó", "baby:coco", COLORS.coco, "coco")}
+          ${this._actionTemplate("Ambos", "baby:ambos", COLORS.ambos, "ambos")}
+        </section>
       </section>
     `;
   }
@@ -739,9 +738,6 @@ class BabyDiaryDiaperCard extends HTMLElement {
 
         baby-diary-diaper-card .baby-diaper {
           color: var(--primary-text-color);
-          display: grid;
-          gap: 12px;
-          padding: 12px;
         }
 
         baby-diary-diaper-card .overview {
@@ -757,12 +753,11 @@ class BabyDiaryDiaperCard extends HTMLElement {
               color-mix(in srgb, var(--primary-text-color) 2%, transparent)
             ),
             color-mix(in srgb, var(--ha-card-background, var(--card-background-color)) 88%, transparent);
-          border: 1px solid color-mix(in srgb, var(--primary-text-color) 18%, var(--divider-color));
-          border-radius: var(--ha-card-border-radius, 12px);
+          border: 0;
           display: grid;
-          gap: 10px;
+          gap: 14px;
           overflow: hidden;
-          padding: 14px 16px 12px;
+          padding: 18px 18px 0;
           position: relative;
         }
 
@@ -897,8 +892,8 @@ class BabyDiaryDiaperCard extends HTMLElement {
           border: 0;
           cursor: pointer;
           display: block;
-          height: 132px;
-          margin: -2px -4px 0;
+          height: 126px;
+          margin: -8px -8px 0;
           overflow: hidden;
           padding: 0;
           position: relative;
@@ -927,9 +922,18 @@ class BabyDiaryDiaperCard extends HTMLElement {
         }
 
         baby-diary-diaper-card .actions {
+          background:
+            linear-gradient(
+              180deg,
+              transparent,
+              color-mix(in srgb, var(--primary-text-color) 4%, transparent)
+            );
+          border-top: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
           display: grid;
-          gap: 12px;
+          gap: 8px;
           grid-template-columns: repeat(3, minmax(0, 1fr));
+          margin: -2px -18px 0;
+          padding: 12px 18px 18px;
         }
 
         baby-diary-diaper-card .action {
@@ -937,21 +941,20 @@ class BabyDiaryDiaperCard extends HTMLElement {
           background:
             linear-gradient(
               180deg,
-              color-mix(in srgb, var(--accent) 9%, transparent),
-              color-mix(in srgb, var(--accent) 4%, transparent)
-            ),
-            color-mix(in srgb, var(--ha-card-background, var(--card-background-color)) 88%, transparent);
-          border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--divider-color));
-          border-radius: var(--ha-card-border-radius, 12px);
+              color-mix(in srgb, var(--accent) 12%, transparent),
+              color-mix(in srgb, var(--accent) 5%, transparent)
+            );
+          border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+          border-radius: 13px;
           color: var(--primary-text-color);
           cursor: pointer;
           display: flex;
           flex-direction: column;
           font-size: 18px;
           font-weight: 800;
-          gap: 10px;
+          gap: 8px;
           justify-content: center;
-          min-height: 110px;
+          min-height: 88px;
           padding: 14px 8px;
         }
 
@@ -979,17 +982,14 @@ class BabyDiaryDiaperCard extends HTMLElement {
         }
 
         @media (max-width: 520px) {
-          baby-diary-diaper-card .baby-diaper {
-            gap: 10px;
-            padding: 10px;
-          }
-
           baby-diary-diaper-card .actions {
             gap: 10px;
+            margin: -2px -14px 0;
+            padding: 10px 14px 14px;
           }
 
           baby-diary-diaper-card .overview {
-            padding: 12px 12px 10px;
+            padding: 14px 14px 0;
           }
 
           baby-diary-diaper-card .overview-header {
@@ -1031,12 +1031,13 @@ class BabyDiaryDiaperCard extends HTMLElement {
           }
 
           baby-diary-diaper-card .overview-chart {
-            height: 118px;
+            height: 112px;
+            margin-inline: -6px;
           }
 
           baby-diary-diaper-card .action {
             font-size: 16px;
-            min-height: 96px;
+            min-height: 78px;
           }
 
           baby-diary-diaper-card .action ha-icon {
