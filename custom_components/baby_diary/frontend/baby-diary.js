@@ -1196,6 +1196,7 @@ class BabyDiaryFeedingCard extends HTMLElement {
     );
     const name = this._config.name || "Mamadas";
     const icon = this._config.icon || "baby:mamada";
+    const statusLabel = active ? "Em curso" : "Em pausa";
     const buttonTitle = active ? "Parar mamada" : "Iniciar mamada";
     const buttonSubtitle = active ? formatDurationPrecise(currentSeconds) : "";
     const averageDurationText =
@@ -1241,6 +1242,7 @@ class BabyDiaryFeedingCard extends HTMLElement {
                 <div class="eyebrow">
                   <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
                   <span>${escapeHtml(name)}</span>
+                  <span class="feeding-status ${active ? "active" : ""}">${statusLabel}</span>
                 </div>
                 <div class="total">${formatFeedingCount(count)}</div>
                 <div class="subtitle">Hoje</div>
@@ -1528,6 +1530,29 @@ class BabyDiaryFeedingCard extends HTMLElement {
     return `
       <style>
         ${overviewCardStyles("baby-diary-feeding-card", COLORS.mamada)}
+
+        baby-diary-feeding-card .eyebrow .feeding-status {
+          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
+          border: 1px solid color-mix(in srgb, var(--divider-color) 70%, transparent);
+          border-radius: 999px;
+          color: var(--secondary-text-color);
+          flex: 0 0 auto;
+          font-size: 9px;
+          font-weight: 800;
+          line-height: 1;
+          margin-left: 2px;
+          overflow: visible;
+          padding: 3px 6px;
+          text-overflow: clip;
+          text-transform: uppercase;
+          white-space: nowrap;
+        }
+
+        baby-diary-feeding-card .eyebrow .feeding-status.active {
+          background: color-mix(in srgb, ${COLORS.mamada} 16%, transparent);
+          border-color: color-mix(in srgb, ${COLORS.mamada} 50%, transparent);
+          color: ${COLORS.mamada};
+        }
 
         baby-diary-feeding-card .feeding-stats .overview-stat {
           cursor: default;
