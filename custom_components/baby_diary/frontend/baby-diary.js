@@ -889,11 +889,13 @@ class BabyDiaryDiaperCard extends HTMLElement {
           cursor: pointer;
           display: block;
           height: 126px;
-          margin: -8px -8px 0;
+          justify-self: center;
+          margin: -8px auto 0;
+          max-width: 560px;
           overflow: hidden;
           padding: 0;
           position: relative;
-          width: 100%;
+          width: min(100%, 560px);
         }
 
         baby-diary-diaper-card .soft-chart {
@@ -1027,7 +1029,9 @@ class BabyDiaryDiaperCard extends HTMLElement {
 
           baby-diary-diaper-card .overview-chart {
             height: 112px;
-            margin-inline: -6px;
+            margin-inline: auto;
+            max-width: none;
+            width: 100%;
           }
 
           baby-diary-diaper-card .action {
