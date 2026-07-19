@@ -931,7 +931,7 @@ class BabyDiaryDiaperCard extends HTMLElement {
           gap: 8px;
           grid-template-columns: repeat(3, minmax(0, 1fr));
           margin: -2px -18px 0;
-          padding: 12px 18px 18px;
+          padding: 10px 18px 14px;
         }
 
         baby-diary-diaper-card .action {
@@ -948,18 +948,18 @@ class BabyDiaryDiaperCard extends HTMLElement {
           cursor: pointer;
           display: flex;
           flex-direction: column;
-          font-size: 18px;
+          font-size: 16px;
           font-weight: 800;
-          gap: 8px;
+          gap: 6px;
           justify-content: center;
-          min-height: 88px;
-          padding: 14px 8px;
+          min-height: 70px;
+          padding: 10px 8px;
         }
 
         baby-diary-diaper-card .action ha-icon {
           color: var(--accent);
-          height: 42px;
-          width: 42px;
+          height: 30px;
+          width: 30px;
         }
 
         baby-diary-diaper-card .missing {
@@ -983,7 +983,7 @@ class BabyDiaryDiaperCard extends HTMLElement {
           baby-diary-diaper-card .actions {
             gap: 10px;
             margin: -2px -14px 0;
-            padding: 10px 14px 14px;
+            padding: 10px 14px 12px;
           }
 
           baby-diary-diaper-card .overview {
@@ -1035,13 +1035,13 @@ class BabyDiaryDiaperCard extends HTMLElement {
           }
 
           baby-diary-diaper-card .action {
-            font-size: 16px;
-            min-height: 78px;
+            font-size: 15px;
+            min-height: 68px;
           }
 
           baby-diary-diaper-card .action ha-icon {
-            height: 34px;
-            width: 34px;
+            height: 28px;
+            width: 28px;
           }
         }
       </style>
