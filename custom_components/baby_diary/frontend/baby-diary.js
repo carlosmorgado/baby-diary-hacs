@@ -341,40 +341,6 @@ const areaPath = (points) => {
   return `${line} L ${last.x} 100 L ${first.x} 100 Z`;
 };
 
-const chartTemplate = ({ points, color, id, className = "" }) => `
-  <svg
-    class="soft-chart ${className}"
-    viewBox="0 0 100 100"
-    preserveAspectRatio="none"
-    aria-hidden="true"
-    focusable="false"
-  >
-    <defs>
-      <linearGradient id="${id}-fill" x1="0" x2="0" y1="0" y2="1">
-        <stop offset="0%" stop-color="${color}" stop-opacity="0.38"></stop>
-        <stop offset="58%" stop-color="${color}" stop-opacity="0.16"></stop>
-        <stop offset="100%" stop-color="${color}" stop-opacity="0"></stop>
-      </linearGradient>
-      <filter id="${id}-glow" x="-10%" y="-35%" width="120%" height="170%">
-        <feGaussianBlur stdDeviation="1.3" result="blur"></feGaussianBlur>
-        <feMerge>
-          <feMergeNode in="blur"></feMergeNode>
-          <feMergeNode in="SourceGraphic"></feMergeNode>
-        </feMerge>
-      </filter>
-    </defs>
-    <path class="soft-chart-fill" d="${areaPath(points)}" fill="url(#${id}-fill)"></path>
-    <path
-      class="soft-chart-line"
-      d="${smoothPath(points)}"
-      fill="none"
-      stroke="${color}"
-      filter="url(#${id}-glow)"
-      pathLength="1"
-    ></path>
-  </svg>
-`;
-
 const multiChartTemplate = ({ series, id, className = "" }) => `
   <svg
     class="soft-chart multi-chart ${className}"
@@ -421,6 +387,416 @@ const multiChartTemplate = ({ series, id, className = "" }) => `
       )
       .join("")}
   </svg>
+`;
+
+const overviewStatTemplate = ({
+  label,
+  detail,
+  color,
+  icon,
+  entityId,
+  title,
+  className = ""
+}) => {
+  const tagName = entityId ? "button" : "div";
+  const classes = ["overview-stat", icon ? "" : "no-icon", className]
+    .filter(Boolean)
+    .join(" ");
+  const actionAttributes = entityId
+    ? `type="button" data-open-history data-entity-id="${escapeHtml(entityId)}" title="${escapeHtml(
+        title || `Abrir histórico de ${label}`
+      )}"`
+    : "";
+  const iconMarkup = icon ? `<ha-icon icon="${escapeHtml(icon)}"></ha-icon>` : "";
+
+  return `
+    <${tagName}
+      class="${classes}"
+      style="--accent:${color}"
+      ${actionAttributes}
+    >
+      ${iconMarkup}
+      <span>
+        <strong>${escapeHtml(label)}</strong>
+        <small>${escapeHtml(detail)}</small>
+      </span>
+    </${tagName}>
+  `;
+};
+
+const actionButtonTemplate = ({
+  label,
+  icon,
+  color,
+  dataAttribute,
+  dataValue,
+  detail = "",
+  className = "",
+  active = false
+}) => {
+  const classes = ["action", className, active ? "active" : ""].filter(Boolean).join(" ");
+  const actionAttribute = dataAttribute
+    ? dataValue === undefined
+      ? ` ${dataAttribute}`
+      : ` ${dataAttribute}="${escapeHtml(dataValue)}"`
+    : "";
+
+  return `
+    <button
+      class="${classes}"
+      type="button"
+      style="--accent:${color}"
+      ${actionAttribute}
+    >
+      <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+      <span>
+        <strong>${escapeHtml(label)}</strong>
+        ${detail ? `<small>${escapeHtml(detail)}</small>` : ""}
+      </span>
+    </button>
+  `;
+};
+
+const overviewCardStyles = (selector, accentColor) => `
+  ${selector} {
+    display: block;
+  }
+
+  ${selector} ha-card {
+    overflow: hidden;
+  }
+
+  ${selector} .baby-card {
+    color: var(--primary-text-color);
+  }
+
+  ${selector} .overview {
+    background:
+      radial-gradient(
+        circle at 88% 4%,
+        color-mix(in srgb, ${accentColor} 16%, transparent),
+        transparent 34%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--primary-text-color) 5%, transparent),
+        color-mix(in srgb, var(--primary-text-color) 2%, transparent)
+      ),
+      color-mix(in srgb, var(--ha-card-background, var(--card-background-color)) 88%, transparent);
+    border: 0;
+    display: grid;
+    gap: 14px;
+    overflow: hidden;
+    padding: 18px 18px 0;
+    position: relative;
+  }
+
+  ${selector} .overview-header {
+    align-items: flex-start;
+    display: grid;
+    gap: 14px;
+    position: relative;
+    z-index: 1;
+  }
+
+  ${selector} .overview-title {
+    background: transparent;
+    border: 0;
+    border-radius: 10px;
+    color: var(--primary-text-color);
+    cursor: pointer;
+    display: grid;
+    margin: -8px 0 -2px -8px;
+    min-width: 0;
+    padding: 8px;
+    text-align: left;
+  }
+
+  ${selector} .overview-title:hover,
+  ${selector} .overview-stat:hover {
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+
+  ${selector} .eyebrow {
+    align-items: center;
+    color: var(--secondary-text-color);
+    display: flex;
+    font-weight: 700;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  ${selector} .eyebrow ha-icon {
+    color: var(--accent);
+    flex: 0 0 auto;
+    height: 22px;
+    width: 22px;
+  }
+
+  ${selector} .eyebrow span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  ${selector} .total {
+    font-size: 42px;
+    font-weight: 800;
+    line-height: 1;
+    margin-top: 12px;
+    white-space: nowrap;
+  }
+
+  ${selector} .subtitle {
+    color: var(--secondary-text-color);
+    font-size: 14px;
+    margin-top: 6px;
+  }
+
+  ${selector} .overview-stats {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-width: min(260px, 100%);
+  }
+
+  ${selector} .overview-stat {
+    align-items: center;
+    background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+    border: 1px solid color-mix(in srgb, var(--divider-color) 75%, transparent);
+    border-radius: 12px;
+    color: var(--primary-text-color);
+    cursor: pointer;
+    display: flex;
+    gap: 9px;
+    min-width: 0;
+    padding: 10px 12px;
+    text-align: left;
+  }
+
+  ${selector} .overview-stat.no-icon {
+    cursor: default;
+  }
+
+  ${selector} .overview-title:focus-visible,
+  ${selector} .overview-stat:focus-visible,
+  ${selector} .overview-chart:focus-visible,
+  ${selector} .action:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--accent) 76%, transparent);
+    outline-offset: 2px;
+  }
+
+  ${selector} .overview-stat ha-icon {
+    color: var(--accent);
+    flex: 0 0 auto;
+    height: 22px;
+    width: 22px;
+  }
+
+  ${selector} .overview-stat span {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  ${selector} .overview-stat strong {
+    font-size: 14px;
+    font-weight: 800;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  ${selector} .overview-stat small {
+    color: var(--secondary-text-color);
+    font-size: 12px;
+    line-height: 1.2;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  ${selector} .overview-chart {
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    display: block;
+    height: 126px;
+    justify-self: center;
+    margin: -8px auto 0;
+    max-width: 560px;
+    overflow: hidden;
+    padding: 0;
+    position: relative;
+    width: min(100%, 560px);
+  }
+
+  ${selector} .soft-chart {
+    bottom: 0;
+    display: block;
+    height: 100%;
+    left: 0;
+    overflow: hidden;
+    position: absolute;
+    right: 0;
+    width: 100%;
+  }
+
+  ${selector} .soft-chart-line {
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2.2;
+  }
+
+  ${selector} .soft-chart-fill {
+    opacity: 0.68;
+  }
+
+  ${selector} .actions {
+    background:
+      linear-gradient(
+        180deg,
+        transparent,
+        color-mix(in srgb, var(--primary-text-color) 4%, transparent)
+      );
+    border-top: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: -2px -18px 0;
+    padding: 10px 18px 14px;
+  }
+
+  ${selector} .action {
+    align-items: center;
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--accent) 12%, transparent),
+        color-mix(in srgb, var(--accent) 5%, transparent)
+      );
+    border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+    border-radius: 13px;
+    color: var(--primary-text-color);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    font-size: 16px;
+    font-weight: 800;
+    gap: 6px;
+    justify-content: center;
+    min-height: 70px;
+    padding: 10px 8px;
+  }
+
+  ${selector} .action ha-icon {
+    color: var(--accent);
+    height: 30px;
+    width: 30px;
+  }
+
+  ${selector} .action span {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    text-align: center;
+  }
+
+  ${selector} .action strong {
+    font-size: inherit;
+    line-height: 1.1;
+  }
+
+  ${selector} .action small {
+    color: var(--secondary-text-color);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  ${selector} .missing {
+    padding: 18px;
+  }
+
+  ${selector} .missing h3 {
+    margin: 0 0 8px;
+  }
+
+  ${selector} .missing p,
+  ${selector} .missing li {
+    color: var(--secondary-text-color);
+  }
+
+  ${selector} .missing code {
+    color: var(--primary-text-color);
+  }
+
+  @media (max-width: 520px) {
+    ${selector} .actions {
+      gap: 10px;
+      margin: -2px -14px 0;
+      padding: 10px 14px 12px;
+    }
+
+    ${selector} .overview {
+      padding: 14px 14px 0;
+    }
+
+    ${selector} .overview-header {
+      gap: 10px;
+    }
+
+    ${selector} .overview-title {
+      margin: -6px 0 0 -6px;
+      padding: 6px;
+    }
+
+    ${selector} .total {
+      font-size: 36px;
+      margin-top: 10px;
+    }
+
+    ${selector} .overview-stats {
+      gap: 4px;
+      min-width: 0;
+    }
+
+    ${selector} .overview-stat {
+      gap: 6px;
+      padding: 6px;
+    }
+
+    ${selector} .overview-stat ha-icon {
+      height: 19px;
+      width: 19px;
+    }
+
+    ${selector} .overview-stat strong {
+      font-size: 13px;
+    }
+
+    ${selector} .overview-stat small {
+      font-size: 11px;
+    }
+
+    ${selector} .overview-chart {
+      height: 112px;
+      margin-inline: auto;
+      max-width: none;
+      width: 100%;
+    }
+
+    ${selector} .action {
+      font-size: 15px;
+      min-height: 68px;
+    }
+
+    ${selector} .action ha-icon {
+      height: 28px;
+      width: 28px;
+    }
+  }
 `;
 
 class BabyDiaryDiaperCard extends HTMLElement {
@@ -520,7 +896,7 @@ class BabyDiaryDiaperCard extends HTMLElement {
 
     return `
       <ha-card>
-        <div class="baby-diaper">
+        <div class="baby-diaper baby-card">
           ${this._overviewTemplate(series, maxCount)}
         </div>
       </ha-card>
@@ -565,7 +941,7 @@ class BabyDiaryDiaperCard extends HTMLElement {
 
     return `
       <ha-card>
-        <div class="baby-diaper missing">
+        <div class="baby-diaper baby-card missing">
           <h3>Baby Diary</h3>
           <p>As entidades diárias de fraldas ainda não foram encontradas.</p>
           <p>${configuredBaby}</p>
@@ -584,24 +960,16 @@ class BabyDiaryDiaperCard extends HTMLElement {
     }));
 
     const stats = breakdown
-      .map((item) => {
-        return `
-          <button
-            class="overview-stat"
-            type="button"
-            style="--accent:${item.color}"
-            data-open-history
-            data-entity-id="${escapeHtml(item.entityId)}"
-            title="Abrir histórico de ${escapeHtml(item.label)}"
-          >
-            <ha-icon icon="${escapeHtml(item.icon)}"></ha-icon>
-            <span>
-              <strong>${escapeHtml(item.label)}</strong>
-              <small>${escapeHtml(item.detail)}</small>
-            </span>
-          </button>
-        `;
-      })
+      .map((item) =>
+        overviewStatTemplate({
+          label: item.label,
+          detail: item.detail,
+          color: item.color,
+          icon: item.icon,
+          entityId: item.entityId,
+          title: `Abrir histórico de ${item.label}`
+        })
+      )
       .join("");
 
     return `
@@ -677,17 +1045,13 @@ class BabyDiaryDiaperCard extends HTMLElement {
   }
 
   _actionTemplate(name, icon, color, type) {
-    return `
-      <button
-        class="action"
-        type="button"
-        style="--accent:${color}"
-        data-log-diaper="${type}"
-      >
-        <ha-icon icon="${icon}"></ha-icon>
-        <span>${name}</span>
-      </button>
-    `;
+    return actionButtonTemplate({
+      label: name,
+      icon,
+      color,
+      dataAttribute: "data-log-diaper",
+      dataValue: type
+    });
   }
 
   async _logDiaper(type) {
@@ -728,322 +1092,7 @@ class BabyDiaryDiaperCard extends HTMLElement {
   _styles() {
     return `
       <style>
-        baby-diary-diaper-card {
-          display: block;
-        }
-
-        baby-diary-diaper-card ha-card {
-          overflow: hidden;
-        }
-
-        baby-diary-diaper-card .baby-diaper {
-          color: var(--primary-text-color);
-        }
-
-        baby-diary-diaper-card .overview {
-          background:
-            radial-gradient(
-              circle at 88% 4%,
-              color-mix(in srgb, ${COLORS.ambos} 16%, transparent),
-              transparent 34%
-            ),
-            linear-gradient(
-              180deg,
-              color-mix(in srgb, var(--primary-text-color) 5%, transparent),
-              color-mix(in srgb, var(--primary-text-color) 2%, transparent)
-            ),
-            color-mix(in srgb, var(--ha-card-background, var(--card-background-color)) 88%, transparent);
-          border: 0;
-          display: grid;
-          gap: 14px;
-          overflow: hidden;
-          padding: 18px 18px 0;
-          position: relative;
-        }
-
-        baby-diary-diaper-card .overview-header {
-          align-items: flex-start;
-          display: grid;
-          gap: 14px;
-          position: relative;
-          z-index: 1;
-        }
-
-        baby-diary-diaper-card .overview-title {
-          background: transparent;
-          border: 0;
-          border-radius: 10px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: grid;
-          margin: -8px 0 -2px -8px;
-          min-width: 0;
-          padding: 8px;
-          text-align: left;
-        }
-
-        baby-diary-diaper-card .overview-title:hover,
-        baby-diary-diaper-card .overview-stat:hover {
-          background: color-mix(in srgb, var(--accent) 10%, transparent);
-        }
-
-        baby-diary-diaper-card .eyebrow {
-          align-items: center;
-          color: var(--secondary-text-color);
-          display: flex;
-          font-weight: 700;
-          gap: 8px;
-          min-width: 0;
-        }
-
-        baby-diary-diaper-card .eyebrow ha-icon {
-          color: var(--accent);
-          flex: 0 0 auto;
-          height: 22px;
-          width: 22px;
-        }
-
-        baby-diary-diaper-card .eyebrow span {
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        baby-diary-diaper-card .total {
-          font-size: 42px;
-          font-weight: 800;
-          line-height: 1;
-          margin-top: 12px;
-          white-space: nowrap;
-        }
-
-        baby-diary-diaper-card .subtitle {
-          color: var(--secondary-text-color);
-          font-size: 14px;
-          margin-top: 6px;
-        }
-
-        baby-diary-diaper-card .overview-stats {
-          display: grid;
-          gap: 10px;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          min-width: min(260px, 100%);
-        }
-
-        baby-diary-diaper-card .overview-stat {
-          align-items: center;
-          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--divider-color) 75%, transparent);
-          border-radius: 12px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: flex;
-          gap: 9px;
-          min-width: 0;
-          padding: 10px 12px;
-          text-align: left;
-        }
-
-        baby-diary-diaper-card .overview-title:focus-visible,
-        baby-diary-diaper-card .overview-stat:focus-visible,
-        baby-diary-diaper-card .overview-chart:focus-visible,
-        baby-diary-diaper-card .action:focus-visible {
-          outline: 2px solid color-mix(in srgb, var(--accent) 76%, transparent);
-          outline-offset: 2px;
-        }
-
-        baby-diary-diaper-card .overview-stat ha-icon {
-          color: var(--accent);
-          flex: 0 0 auto;
-          height: 22px;
-          width: 22px;
-        }
-
-        baby-diary-diaper-card .overview-stat span {
-          display: grid;
-          gap: 1px;
-          min-width: 0;
-        }
-
-        baby-diary-diaper-card .overview-stat strong {
-          font-size: 14px;
-          font-weight: 800;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        baby-diary-diaper-card .overview-stat small {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-          line-height: 1.2;
-          min-width: 0;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        baby-diary-diaper-card .overview-chart {
-          background: transparent;
-          border: 0;
-          cursor: pointer;
-          display: block;
-          height: 126px;
-          justify-self: center;
-          margin: -8px auto 0;
-          max-width: 560px;
-          overflow: hidden;
-          padding: 0;
-          position: relative;
-          width: min(100%, 560px);
-        }
-
-        baby-diary-diaper-card .soft-chart {
-          bottom: 0;
-          display: block;
-          height: 100%;
-          left: 0;
-          overflow: hidden;
-          position: absolute;
-          right: 0;
-          width: 100%;
-        }
-
-        baby-diary-diaper-card .soft-chart-line {
-          stroke-linecap: round;
-          stroke-linejoin: round;
-          stroke-width: 2.2;
-        }
-
-        baby-diary-diaper-card .soft-chart-fill {
-          opacity: 0.68;
-        }
-
-        baby-diary-diaper-card .actions {
-          background:
-            linear-gradient(
-              180deg,
-              transparent,
-              color-mix(in srgb, var(--primary-text-color) 4%, transparent)
-            );
-          border-top: 1px solid color-mix(in srgb, var(--primary-text-color) 10%, transparent);
-          display: grid;
-          gap: 8px;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          margin: -2px -18px 0;
-          padding: 10px 18px 14px;
-        }
-
-        baby-diary-diaper-card .action {
-          align-items: center;
-          background:
-            linear-gradient(
-              180deg,
-              color-mix(in srgb, var(--accent) 12%, transparent),
-              color-mix(in srgb, var(--accent) 5%, transparent)
-            );
-          border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
-          border-radius: 13px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: flex;
-          flex-direction: column;
-          font-size: 16px;
-          font-weight: 800;
-          gap: 6px;
-          justify-content: center;
-          min-height: 70px;
-          padding: 10px 8px;
-        }
-
-        baby-diary-diaper-card .action ha-icon {
-          color: var(--accent);
-          height: 30px;
-          width: 30px;
-        }
-
-        baby-diary-diaper-card .missing {
-          padding: 18px;
-        }
-
-        baby-diary-diaper-card .missing h3 {
-          margin: 0 0 8px;
-        }
-
-        baby-diary-diaper-card .missing p,
-        baby-diary-diaper-card .missing li {
-          color: var(--secondary-text-color);
-        }
-
-        baby-diary-diaper-card .missing code {
-          color: var(--primary-text-color);
-        }
-
-        @media (max-width: 520px) {
-          baby-diary-diaper-card .actions {
-            gap: 10px;
-            margin: -2px -14px 0;
-            padding: 10px 14px 12px;
-          }
-
-          baby-diary-diaper-card .overview {
-            padding: 14px 14px 0;
-          }
-
-          baby-diary-diaper-card .overview-header {
-            gap: 10px;
-          }
-
-          baby-diary-diaper-card .overview-title {
-            margin: -6px 0 0 -6px;
-            padding: 6px;
-          }
-
-          baby-diary-diaper-card .total {
-            font-size: 36px;
-            margin-top: 10px;
-          }
-
-          baby-diary-diaper-card .overview-stats {
-            gap: 4px;
-            min-width: 0;
-          }
-
-          baby-diary-diaper-card .overview-stat {
-            gap: 6px;
-            padding: 6px;
-          }
-
-          baby-diary-diaper-card .overview-stat ha-icon {
-            height: 19px;
-            width: 19px;
-          }
-
-          baby-diary-diaper-card .overview-stat strong {
-            font-size: 13px;
-          }
-
-          baby-diary-diaper-card .overview-stat small {
-            font-size: 11px;
-          }
-
-          baby-diary-diaper-card .overview-chart {
-            height: 112px;
-            margin-inline: auto;
-            max-width: none;
-            width: 100%;
-          }
-
-          baby-diary-diaper-card .action {
-            font-size: 15px;
-            min-height: 68px;
-          }
-
-          baby-diary-diaper-card .action ha-icon {
-            height: 28px;
-            width: 28px;
-          }
-        }
+        ${overviewCardStyles("baby-diary-diaper-card", COLORS.ambos)}
       </style>
     `;
   }
@@ -1107,7 +1156,7 @@ class BabyDiaryFeedingCard extends HTMLElement {
     return {
       columns: 12,
       min_columns: 6,
-      rows: 5,
+      rows: 7,
       min_rows: 4
     };
   }
@@ -1131,19 +1180,17 @@ class BabyDiaryFeedingCard extends HTMLElement {
     this
       .querySelector("[data-toggle-feeding]")
       ?.addEventListener("click", () => this._toggleFeeding());
-    this
-      .querySelector("[data-open-history]")
-      ?.addEventListener("click", (event) =>
-        this._openMoreInfo(event.currentTarget.dataset.entityId)
+    this.querySelectorAll("[data-open-history]").forEach((element) => {
+      element.addEventListener("click", () =>
+        this._openMoreInfo(element.dataset.entityId)
       );
-    this
-      .querySelector("[data-open-history]")
-      ?.addEventListener("keydown", (event) => {
+      element.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          this._openMoreInfo(event.currentTarget.dataset.entityId);
+          this._openMoreInfo(element.dataset.entityId);
         }
       });
+    });
   }
 
   _cardTemplate(entities) {
@@ -1158,53 +1205,82 @@ class BabyDiaryFeedingCard extends HTMLElement {
     const sessions = this._sessionsFromState(dailyState, currentState);
     const stats = this._feedingStats(sessions);
     const sessionChart = this._sessionChart(sessions);
+    const name = this._config.name || "Mamadas";
+    const icon = this._config.icon || "baby:mamada";
+    const statusLabel = active ? "Em curso" : "Em pausa";
     const buttonTitle = active ? "Parar mamada" : "Iniciar mamada";
     const buttonSubtitle = active
       ? `Em curso · ${formatDurationPrecise(currentSeconds)}`
       : "Tocar para começar";
+    const statCards = [
+      {
+        label: "Duração média",
+        detail: stats.averageDuration
+      },
+      {
+        label: "Espaçamento médio",
+        detail: stats.averageSpacing
+      }
+    ]
+      .map((item) =>
+        overviewStatTemplate({
+          ...item,
+          color: COLORS.mamada,
+          className: "feeding-stat"
+        })
+      )
+      .join("");
+
     this._syncActiveTimer(active);
 
     return `
       <ha-card>
-        <div class="baby-feeding">
-          <header class="header">
-            <div class="title-block">
-              <div class="eyebrow">
-                <ha-icon icon="${this._config.icon || "baby:mamada"}"></ha-icon>
-                <span>${this._config.name || "Mamadas"}</span>
+        <div class="baby-feeding baby-card">
+          <section class="overview feeding-overview" aria-label="Mamadas de hoje">
+            <header class="overview-header">
+              <button
+                class="overview-title"
+                type="button"
+                style="--accent:${COLORS.mamada}"
+                data-open-history
+                data-entity-id="${escapeHtml(entities.feedings)}"
+                title="Abrir histórico de ${escapeHtml(name)}"
+              >
+                <div class="eyebrow">
+                  <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
+                  <span>${escapeHtml(name)}</span>
+                  <span class="status ${active ? "active" : ""}">${statusLabel}</span>
+                </div>
+                <div class="total">${formatFeedingCount(count)}</div>
+                <div class="subtitle">${formatDurationPrecise(totalSeconds)} hoje</div>
+              </button>
+              <div class="overview-stats feeding-stats">
+                ${statCards}
               </div>
-              <div class="total">${formatFeedingCount(count)}</div>
-              <div class="subtitle">${formatDurationPrecise(totalSeconds)} hoje</div>
-            </div>
-            <div class="status ${active ? "active" : ""}">
-              ${active ? "Em curso" : "Em pausa"}
-            </div>
-          </header>
-
-          <section class="stats" aria-label="Estatísticas de hoje">
-            ${this._statTemplate("Duração média", stats.averageDuration)}
-            ${this._statTemplate("Espaçamento médio", stats.averageSpacing)}
+            </header>
+            <button
+              class="overview-chart feeding-chart-button"
+              type="button"
+              style="--accent:${COLORS.mamada}"
+              aria-label="Abrir histórico das mamadas de hoje"
+              data-open-history
+              data-entity-id="${escapeHtml(entities.feedings)}"
+              title="Abrir histórico"
+            >
+              ${sessionChart}
+            </button>
+            <section class="actions feeding-actions" aria-label="Controlar mamada">
+              ${actionButtonTemplate({
+                label: buttonTitle,
+                icon,
+                color: COLORS.mamada,
+                dataAttribute: "data-toggle-feeding",
+                detail: buttonSubtitle,
+                className: "feeding-action",
+                active
+              })}
+            </section>
           </section>
-
-          <section
-            class="timeline"
-            aria-label="Abrir histórico das mamadas de hoje"
-            data-open-history
-            data-entity-id="${entities.feedings}"
-            role="button"
-            tabindex="0"
-            title="Abrir histórico"
-          >
-            ${sessionChart}
-          </section>
-
-          <button class="toggle ${active ? "active" : ""}" type="button" data-toggle-feeding>
-            <ha-icon icon="${this._config.icon || "baby:mamada"}"></ha-icon>
-            <span class="toggle-text">
-              <strong>${buttonTitle}</strong>
-              <small>${buttonSubtitle}</small>
-            </span>
-          </button>
         </div>
       </ha-card>
     `;
@@ -1234,10 +1310,13 @@ class BabyDiaryFeedingCard extends HTMLElement {
       .join("");
 
     return `
-      <div class="chart-line"></div>
-      ${chartTemplate({
-        points: this._sessionTrendPoints(sessions),
-        color: COLORS.mamada,
+      ${multiChartTemplate({
+        series: [
+          {
+            color: COLORS.mamada,
+            points: this._sessionTrendPoints(sessions)
+          }
+        ],
         id: `${this._chartId}-timeline`,
         className: "feeding-chart"
       })}
@@ -1396,15 +1475,6 @@ class BabyDiaryFeedingCard extends HTMLElement {
     };
   }
 
-  _statTemplate(label, value) {
-    return `
-      <div class="stat">
-        <span>${label}</span>
-        <strong>${value}</strong>
-      </div>
-    `;
-  }
-
   _resolveFeedingEntities() {
     const configuredEntities = this._config.entities || {};
     const expectedEntities = feedingEntitiesForBaby(this._config.baby);
@@ -1440,7 +1510,7 @@ class BabyDiaryFeedingCard extends HTMLElement {
 
     return `
       <ha-card>
-        <div class="baby-feeding missing">
+        <div class="baby-feeding baby-card missing">
           <h3>Baby Diary</h3>
           <p>As entidades de mamadas ainda não foram encontradas.</p>
           <ul>${missing}</ul>
@@ -1515,134 +1585,36 @@ class BabyDiaryFeedingCard extends HTMLElement {
   _styles() {
     return `
       <style>
-        baby-diary-feeding-card {
-          display: block;
-        }
+        ${overviewCardStyles("baby-diary-feeding-card", COLORS.mamada)}
 
-        baby-diary-feeding-card ha-card {
-          overflow: hidden;
-        }
-
-        baby-diary-feeding-card .baby-feeding {
-          color: var(--primary-text-color);
-          padding: 18px;
-        }
-
-        baby-diary-feeding-card .header {
-          align-items: flex-start;
-          display: flex;
-          gap: 16px;
-          justify-content: space-between;
-        }
-
-        baby-diary-feeding-card .eyebrow {
-          align-items: center;
-          color: var(--secondary-text-color);
-          display: flex;
-          font-weight: 700;
-          gap: 8px;
-        }
-
-        baby-diary-feeding-card .eyebrow ha-icon {
-          color: ${COLORS.mamada};
-          height: 22px;
-          width: 22px;
-        }
-
-        baby-diary-feeding-card .total {
-          font-size: 42px;
-          font-weight: 800;
-          line-height: 1;
-          margin-top: 14px;
-        }
-
-        baby-diary-feeding-card .subtitle {
-          color: var(--secondary-text-color);
-          font-size: 14px;
-          margin-top: 6px;
-        }
-
-        baby-diary-feeding-card .status {
+        baby-diary-feeding-card .eyebrow .status {
           background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border: 1px solid var(--divider-color);
           border-radius: 999px;
           color: var(--secondary-text-color);
+          flex: 0 0 auto;
           font-size: 12px;
           font-weight: 800;
           letter-spacing: 0.02em;
+          margin-left: auto;
+          overflow: visible;
           padding: 7px 10px;
           text-transform: uppercase;
+          white-space: nowrap;
         }
 
-        baby-diary-feeding-card .status.active {
+        baby-diary-feeding-card .eyebrow .status.active {
           background: color-mix(in srgb, ${COLORS.mamada} 18%, transparent);
           border-color: color-mix(in srgb, ${COLORS.mamada} 65%, transparent);
           color: ${COLORS.mamada};
         }
 
-        baby-diary-feeding-card .stats {
-          display: grid;
-          gap: 10px;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          margin-top: 16px;
+        baby-diary-feeding-card .feeding-stats .overview-stat {
+          cursor: default;
         }
 
-        baby-diary-feeding-card .stat {
+        baby-diary-feeding-card .feeding-stats .overview-stat:hover {
           background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
-          border: 1px solid color-mix(in srgb, var(--divider-color) 75%, transparent);
-          border-radius: 12px;
-          display: grid;
-          gap: 4px;
-          min-width: 0;
-          padding: 10px 12px;
-        }
-
-        baby-diary-feeding-card .stat span {
-          color: var(--secondary-text-color);
-          font-size: 12px;
-          font-weight: 700;
-        }
-
-        baby-diary-feeding-card .stat strong {
-          color: var(--primary-text-color);
-          font-size: 15px;
-          overflow-wrap: anywhere;
-        }
-
-        baby-diary-feeding-card .timeline {
-          cursor: pointer;
-          background:
-            radial-gradient(
-              circle at 82% 8%,
-              color-mix(in srgb, ${COLORS.mamada} 18%, transparent),
-              transparent 38%
-            ),
-            color-mix(in srgb, var(--primary-text-color) 3%, transparent);
-          border-radius: 12px;
-          height: 132px;
-          margin: 16px 0 14px;
-          outline: none;
-          overflow: hidden;
-          position: relative;
-        }
-
-        baby-diary-feeding-card .timeline:focus-visible {
-          border-radius: 12px;
-          box-shadow: 0 0 0 2px color-mix(in srgb, ${COLORS.mamada} 70%, transparent);
-        }
-
-        baby-diary-feeding-card .chart-line {
-          background: linear-gradient(
-            90deg,
-            transparent,
-            color-mix(in srgb, var(--primary-text-color) 14%, transparent),
-            transparent
-          );
-          bottom: 32px;
-          height: 1px;
-          left: 14px;
-          position: absolute;
-          right: 14px;
         }
 
         baby-diary-feeding-card .axis-label {
@@ -1660,20 +1632,9 @@ class BabyDiaryFeedingCard extends HTMLElement {
           right: 14px;
         }
 
-        baby-diary-feeding-card .soft-chart {
-          bottom: 16px;
-          display: block;
-          height: calc(100% - 26px);
-          left: 10px;
-          position: absolute;
-          right: 10px;
-          width: calc(100% - 20px);
-        }
-
-        baby-diary-feeding-card .soft-chart-line {
-          stroke-linecap: round;
-          stroke-linejoin: round;
-          stroke-width: 4;
+        baby-diary-feeding-card .feeding-chart-button {
+          height: 132px;
+          margin-top: -6px;
         }
 
         baby-diary-feeding-card .session-marker {
@@ -1696,26 +1657,21 @@ class BabyDiaryFeedingCard extends HTMLElement {
           opacity: 1;
         }
 
-        baby-diary-feeding-card .toggle {
-          align-items: center;
-          background: color-mix(
-            in srgb,
-            ${COLORS.mamada} 22%,
-            transparent
-          );
-          border: 1px solid color-mix(in srgb, ${COLORS.mamada} 48%, transparent);
-          border-radius: 14px;
-          color: var(--primary-text-color);
-          cursor: pointer;
-          display: flex;
-          gap: 14px;
-          min-height: 76px;
-          padding: 14px 16px;
-          text-align: left;
-          width: 100%;
+        baby-diary-feeding-card .feeding-actions {
+          grid-template-columns: 1fr;
         }
 
-        baby-diary-feeding-card .toggle.active {
+        baby-diary-feeding-card .feeding-action {
+          flex-direction: row;
+          font-size: 18px;
+          gap: 12px;
+          justify-content: flex-start;
+          min-height: 70px;
+          padding: 12px 16px;
+          text-align: left;
+        }
+
+        baby-diary-feeding-card .feeding-action.active {
           background: color-mix(
             in srgb,
             ${COLORS.mamada} 34%,
@@ -1723,38 +1679,40 @@ class BabyDiaryFeedingCard extends HTMLElement {
           );
         }
 
-        baby-diary-feeding-card .toggle ha-icon {
-          color: ${COLORS.mamada};
-          height: 36px;
-          width: 36px;
+        baby-diary-feeding-card .feeding-action ha-icon {
+          height: 32px;
+          width: 32px;
         }
 
-        baby-diary-feeding-card .toggle-text {
-          display: grid;
-          gap: 4px;
+        baby-diary-feeding-card .feeding-action span {
+          text-align: left;
         }
 
-        baby-diary-feeding-card .toggle-text strong {
+        baby-diary-feeding-card .feeding-action strong {
           font-size: 18px;
-          line-height: 1.1;
         }
 
-        baby-diary-feeding-card .toggle-text small {
-          color: var(--secondary-text-color);
+        baby-diary-feeding-card .feeding-action small {
           font-size: 13px;
         }
 
-        baby-diary-feeding-card .missing h3 {
-          margin: 0 0 8px;
-        }
+        @media (max-width: 520px) {
+          baby-diary-feeding-card .eyebrow .status {
+            font-size: 10px;
+            padding: 5px 8px;
+          }
 
-        baby-diary-feeding-card .missing p,
-        baby-diary-feeding-card .missing li {
-          color: var(--secondary-text-color);
-        }
+          baby-diary-feeding-card .feeding-chart-button {
+            height: 118px;
+          }
 
-        baby-diary-feeding-card .missing code {
-          color: var(--primary-text-color);
+          baby-diary-feeding-card .feeding-action {
+            min-height: 68px;
+          }
+
+          baby-diary-feeding-card .feeding-action strong {
+            font-size: 16px;
+          }
         }
       </style>
     `;
