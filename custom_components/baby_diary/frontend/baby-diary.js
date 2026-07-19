@@ -378,12 +378,12 @@ const multiChartTemplate = ({ series, id, className = "" }) => `
         .map(
           (item, index) => `
             <linearGradient id="${id}-${index}-fill" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stop-color="${item.color}" stop-opacity="0.28"></stop>
-              <stop offset="62%" stop-color="${item.color}" stop-opacity="0.12"></stop>
+              <stop offset="0%" stop-color="${item.color}" stop-opacity="0.18"></stop>
+              <stop offset="62%" stop-color="${item.color}" stop-opacity="0.07"></stop>
               <stop offset="100%" stop-color="${item.color}" stop-opacity="0"></stop>
             </linearGradient>
             <filter id="${id}-${index}-glow" x="-10%" y="-35%" width="120%" height="170%">
-              <feGaussianBlur stdDeviation="1.05" result="blur"></feGaussianBlur>
+              <feGaussianBlur stdDeviation="0.35" result="blur"></feGaussianBlur>
               <feMerge>
                 <feMergeNode in="blur"></feMergeNode>
                 <feMergeNode in="SourceGraphic"></feMergeNode>
@@ -834,23 +834,23 @@ class BabyDiaryDiaperCard extends HTMLElement {
         baby-diary-diaper-card .soft-chart-line {
           stroke-linecap: round;
           stroke-linejoin: round;
-          stroke-width: 3.7;
+          stroke-width: 3;
         }
 
         baby-diary-diaper-card .soft-chart-fill {
-          opacity: 0.82;
+          opacity: 0.68;
         }
 
         baby-diary-diaper-card .multi-chart .series-0 {
-          stroke-width: 7;
+          stroke-width: 3.4;
         }
 
         baby-diary-diaper-card .multi-chart .series-1 {
-          stroke-width: 5;
+          stroke-width: 3;
         }
 
         baby-diary-diaper-card .multi-chart .series-2 {
-          stroke-width: 3.6;
+          stroke-width: 2.6;
         }
 
         baby-diary-diaper-card .actions {
