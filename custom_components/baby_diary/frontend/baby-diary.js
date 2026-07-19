@@ -576,9 +576,9 @@ class BabyDiaryDiaperCard extends HTMLElement {
 
   _overviewTemplate(series, maxCount) {
     const chartId = `${this._chartId}-diapers-${series.map((item) => item.count).join("-")}`;
-    const chartSeries = series.map((item, index) => ({
+    const chartSeries = series.map((item) => ({
       color: item.color,
-      points: this._combinedMetricChartPoints(item.count, maxCount, index)
+      points: this._combinedMetricChartPoints(item.count, maxCount)
     }));
 
     const stats = series
@@ -626,7 +626,7 @@ class BabyDiaryDiaperCard extends HTMLElement {
     `;
   }
 
-  _combinedMetricChartPoints(count, maxCount, variant) {
+  _combinedMetricChartPoints(count, maxCount) {
     const ratio = count <= 0 ? 0 : clamp(count / maxCount, 0.06, 1);
     const baseline = 91;
 
@@ -639,17 +639,16 @@ class BabyDiaryDiaperCard extends HTMLElement {
       ];
     }
 
-    const target = clamp(88 - ratio * 58 + variant * 6, 15, 88);
-    const earlyLift = ratio * (variant === 0 ? 8 : 14);
-    const softDip = ratio * (variant === 1 ? 4 : 1);
-    const lateLift = variant === 2 ? 7 : variant === 1 ? 3 : 0;
+    const target = clamp(88 - ratio * 58, 15, 88);
+    const earlyLift = ratio * 12;
+    const softDip = ratio * 2;
 
     return [
       { x: 0, y: baseline },
       { x: 12, y: clamp(baseline - earlyLift * 0.35, 18, baseline) },
       { x: 24, y: clamp(baseline - earlyLift + softDip, 18, baseline) },
-      { x: 38, y: clamp(target + 14 + lateLift, 16, baseline) },
-      { x: 54, y: clamp(target + 8 + lateLift, 14, baseline) },
+      { x: 38, y: clamp(target + 14, 16, baseline) },
+      { x: 54, y: clamp(target + 8, 14, baseline) },
       { x: 74, y: clamp(target + 4, 12, baseline) },
       { x: 100, y: clamp(target, 10, baseline) }
     ];
@@ -843,7 +842,15 @@ class BabyDiaryDiaperCard extends HTMLElement {
         }
 
         baby-diary-diaper-card .multi-chart .series-0 {
-          stroke-width: 4.2;
+          stroke-width: 7;
+        }
+
+        baby-diary-diaper-card .multi-chart .series-1 {
+          stroke-width: 5;
+        }
+
+        baby-diary-diaper-card .multi-chart .series-2 {
+          stroke-width: 3.6;
         }
 
         baby-diary-diaper-card .actions {
