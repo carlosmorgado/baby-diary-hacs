@@ -253,21 +253,6 @@ const escapeHtml = (value) =>
     "'": "&#39;"
   }[character]));
 
-const hassLocale = (hass) =>
-  hass?.locale?.language || hass?.selectedLanguage || navigator.language || "pt-PT";
-
-const formatTime = (hass, value) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-
-  return new Intl.DateTimeFormat(hassLocale(hass), {
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(date);
-};
-
 const formatDurationPrecise = (seconds) => {
   const value = Math.max(0, Math.round(Number(seconds) || 0));
   const hours = Math.floor(value / 3600);
@@ -1205,21 +1190,28 @@ class BabyDiaryFeedingCard extends HTMLElement {
     const sessions = this._sessionsFromState(dailyState, currentState);
     const stats = this._feedingStats(sessions);
     const sessionChart = this._sessionChart(sessions);
+    const displayTotalSeconds = Math.max(
+      totalSeconds,
+      sessions.reduce((total, session) => total + session.durationSeconds, 0)
+    );
     const name = this._config.name || "Mamadas";
     const icon = this._config.icon || "baby:mamada";
-    const statusLabel = active ? "Em curso" : "Em pausa";
     const buttonTitle = active ? "Parar mamada" : "Iniciar mamada";
-    const buttonSubtitle = active
-      ? `Em curso · ${formatDurationPrecise(currentSeconds)}`
-      : "Tocar para começar";
+    const buttonSubtitle = active ? formatDurationPrecise(currentSeconds) : "";
+    const averageDurationText =
+      stats.averageDuration === "Sem dados" ? "sem média" : `${stats.averageDuration} média`;
+    const averageSpacingText =
+      stats.averageSpacing === "Sem dados"
+        ? "sem intervalo"
+        : `${stats.averageSpacing} intervalo`;
     const statCards = [
       {
-        label: "Duração média",
-        detail: stats.averageDuration
+        label: "Duração",
+        detail: `${formatDurationPrecise(displayTotalSeconds)} total`
       },
       {
-        label: "Espaçamento médio",
-        detail: stats.averageSpacing
+        label: "Médias",
+        detail: `${averageDurationText} · ${averageSpacingText}`
       }
     ]
       .map((item) =>
@@ -1249,17 +1241,16 @@ class BabyDiaryFeedingCard extends HTMLElement {
                 <div class="eyebrow">
                   <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
                   <span>${escapeHtml(name)}</span>
-                  <span class="status ${active ? "active" : ""}">${statusLabel}</span>
                 </div>
                 <div class="total">${formatFeedingCount(count)}</div>
-                <div class="subtitle">${formatDurationPrecise(totalSeconds)} hoje</div>
+                <div class="subtitle">Hoje</div>
               </button>
               <div class="overview-stats feeding-stats">
                 ${statCards}
               </div>
             </header>
             <button
-              class="overview-chart feeding-chart-button"
+              class="overview-chart"
               type="button"
               style="--accent:${COLORS.mamada}"
               aria-label="Abrir histórico das mamadas de hoje"
@@ -1287,28 +1278,6 @@ class BabyDiaryFeedingCard extends HTMLElement {
   }
 
   _sessionChart(sessions) {
-    const maxDuration = Math.max(
-      ...sessions.map((session) => session.durationSeconds),
-      1
-    );
-    const bars = this._layoutSessions(sessions)
-      .map((session) => {
-        const left = clamp(session.visualLeft, 2, 98);
-        const top = clamp(82 - (session.durationSeconds / maxDuration) * 58, 18, 82);
-        const label = `${formatTime(this._hass, session.startedAt)} · ${formatDurationPrecise(
-          session.durationSeconds
-        )}`;
-
-        return `
-          <div
-            class="session-marker ${session.active ? "active" : ""}"
-            style="--x:${left}%;--y:${top}%"
-            title="${label}"
-          ></div>
-        `;
-      })
-      .join("");
-
     return `
       ${multiChartTemplate({
         series: [
@@ -1320,9 +1289,6 @@ class BabyDiaryFeedingCard extends HTMLElement {
         id: `${this._chartId}-timeline`,
         className: "feeding-chart"
       })}
-      <div class="axis-label start">00:00</div>
-      <div class="axis-label end">24:00</div>
-      ${bars}
     `;
   }
 
@@ -1379,66 +1345,42 @@ class BabyDiaryFeedingCard extends HTMLElement {
     };
   }
 
-  _layoutSessions(sessions) {
-    const groups = [];
-    const sorted = [...sessions].sort((left, right) => left.startSecond - right.startSecond);
-
-    for (const session of sorted) {
-      const latestGroup = groups[groups.length - 1];
-      if (!latestGroup || session.startSecond - latestGroup.startSecond > 600) {
-        groups.push({ startSecond: session.startSecond, sessions: [session] });
-        continue;
-      }
-
-      latestGroup.sessions.push(session);
-    }
-
-    return groups.flatMap((group) => {
-      const middle = (group.sessions.length - 1) / 2;
-      return group.sessions.map((session, index) => {
-        const baseLeft = (session.startSecond / 86400) * 100;
-        const offset = (index - middle) * 3;
-        return {
-          ...session,
-          visualLeft: Math.min(98, Math.max(0, baseLeft + offset)),
-          labelOffset: index * 20
-        };
-      });
-    });
-  }
-
   _sessionTrendPoints(sessions) {
+    const baseline = 91;
+
     if (sessions.length === 0) {
       return [
-        { x: 0, y: 84 },
-        { x: 25, y: 84 },
-        { x: 50, y: 84 },
-        { x: 75, y: 84 },
-        { x: 100, y: 84 }
+        { x: 0, y: baseline },
+        { x: 34, y: baseline },
+        { x: 68, y: baseline },
+        { x: 100, y: baseline }
       ];
     }
 
-    const maxDuration = Math.max(
-      ...sessions.map((session) => session.durationSeconds),
+    const sorted = [...sessions].sort((left, right) => left.startSecond - right.startSecond);
+    const totalDuration = Math.max(
+      sorted.reduce((total, session) => total + session.durationSeconds, 0),
       1
     );
-    const sessionPoints = [...sessions]
-      .sort((left, right) => left.startSecond - right.startSecond)
-      .map((session, index) => {
-        const x = clamp((session.startSecond / 86400) * 100 + index * 0.2, 0, 100);
-        const intensity = session.durationSeconds / maxDuration;
-        const y = clamp(82 - intensity * 58, 18, 82);
+    const points = [{ x: 0, y: baseline }];
+    let accumulated = 0;
 
-        return { x, y };
-      });
-    const first = sessionPoints[0];
-    const last = sessionPoints[sessionPoints.length - 1];
+    for (const session of sorted) {
+      const sessionX = clamp((session.startSecond / 86400) * 100, 1, 98);
+      const previous = points[points.length - 1];
 
-    return [
-      { x: 0, y: clamp(first.y + 28, 64, 88) },
-      ...sessionPoints,
-      { x: 100, y: clamp(last.y + 16, 54, 86) }
-    ];
+      if (sessionX - previous.x > 2) {
+        points.push({ x: sessionX - 1, y: previous.y });
+      }
+
+      accumulated += session.durationSeconds;
+      const y = clamp(baseline - (accumulated / totalDuration) * 58, 18, baseline);
+      points.push({ x: sessionX, y });
+      points.push({ x: clamp(sessionX + 1, sessionX, 99), y });
+    }
+
+    points.push({ x: 100, y: points[points.length - 1].y });
+    return points;
   }
 
   _feedingStats(sessions) {
@@ -1587,28 +1529,6 @@ class BabyDiaryFeedingCard extends HTMLElement {
       <style>
         ${overviewCardStyles("baby-diary-feeding-card", COLORS.mamada)}
 
-        baby-diary-feeding-card .eyebrow .status {
-          background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-          border: 1px solid var(--divider-color);
-          border-radius: 999px;
-          color: var(--secondary-text-color);
-          flex: 0 0 auto;
-          font-size: 12px;
-          font-weight: 800;
-          letter-spacing: 0.02em;
-          margin-left: auto;
-          overflow: visible;
-          padding: 7px 10px;
-          text-transform: uppercase;
-          white-space: nowrap;
-        }
-
-        baby-diary-feeding-card .eyebrow .status.active {
-          background: color-mix(in srgb, ${COLORS.mamada} 18%, transparent);
-          border-color: color-mix(in srgb, ${COLORS.mamada} 65%, transparent);
-          color: ${COLORS.mamada};
-        }
-
         baby-diary-feeding-card .feeding-stats .overview-stat {
           cursor: default;
         }
@@ -1617,58 +1537,8 @@ class BabyDiaryFeedingCard extends HTMLElement {
           background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
         }
 
-        baby-diary-feeding-card .axis-label {
-          bottom: 2px;
-          color: var(--secondary-text-color);
-          font-size: 11px;
-          position: absolute;
-        }
-
-        baby-diary-feeding-card .axis-label.start {
-          left: 14px;
-        }
-
-        baby-diary-feeding-card .axis-label.end {
-          right: 14px;
-        }
-
-        baby-diary-feeding-card .feeding-chart-button {
-          height: 132px;
-          margin-top: -6px;
-        }
-
-        baby-diary-feeding-card .session-marker {
-          background: color-mix(in srgb, ${COLORS.mamada} 84%, var(--primary-text-color) 8%);
-          border: 1px solid color-mix(in srgb, ${COLORS.mamada} 62%, transparent);
-          border-radius: 999px;
-          box-shadow: 0 0 8px color-mix(in srgb, ${COLORS.mamada} 24%, transparent);
-          height: 6px;
-          left: var(--x);
-          opacity: 0.9;
-          position: absolute;
-          top: var(--y);
-          transform: translate(-50%, -50%);
-          width: 6px;
-          z-index: 2;
-        }
-
-        baby-diary-feeding-card .session-marker.active {
-          box-shadow: 0 0 0 4px color-mix(in srgb, ${COLORS.mamada} 16%, transparent);
-          opacity: 1;
-        }
-
         baby-diary-feeding-card .feeding-actions {
           grid-template-columns: 1fr;
-        }
-
-        baby-diary-feeding-card .feeding-action {
-          flex-direction: row;
-          font-size: 18px;
-          gap: 12px;
-          justify-content: flex-start;
-          min-height: 70px;
-          padding: 12px 16px;
-          text-align: left;
         }
 
         baby-diary-feeding-card .feeding-action.active {
@@ -1677,42 +1547,6 @@ class BabyDiaryFeedingCard extends HTMLElement {
             ${COLORS.mamada} 34%,
             transparent
           );
-        }
-
-        baby-diary-feeding-card .feeding-action ha-icon {
-          height: 32px;
-          width: 32px;
-        }
-
-        baby-diary-feeding-card .feeding-action span {
-          text-align: left;
-        }
-
-        baby-diary-feeding-card .feeding-action strong {
-          font-size: 18px;
-        }
-
-        baby-diary-feeding-card .feeding-action small {
-          font-size: 13px;
-        }
-
-        @media (max-width: 520px) {
-          baby-diary-feeding-card .eyebrow .status {
-            font-size: 10px;
-            padding: 5px 8px;
-          }
-
-          baby-diary-feeding-card .feeding-chart-button {
-            height: 118px;
-          }
-
-          baby-diary-feeding-card .feeding-action {
-            min-height: 68px;
-          }
-
-          baby-diary-feeding-card .feeding-action strong {
-            font-size: 16px;
-          }
         }
       </style>
     `;
