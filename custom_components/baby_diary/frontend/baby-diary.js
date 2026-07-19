@@ -382,33 +382,30 @@ const multiChartTemplate = ({ series, id, className = "" }) => `
               <stop offset="62%" stop-color="${item.color}" stop-opacity="0.07"></stop>
               <stop offset="100%" stop-color="${item.color}" stop-opacity="0"></stop>
             </linearGradient>
-            <filter id="${id}-${index}-glow" x="-10%" y="-35%" width="120%" height="170%">
-              <feGaussianBlur stdDeviation="0.35" result="blur"></feGaussianBlur>
-              <feMerge>
-                <feMergeNode in="blur"></feMergeNode>
-                <feMergeNode in="SourceGraphic"></feMergeNode>
-              </feMerge>
-            </filter>
           `
         )
         .join("")}
     </defs>
     ${series
+      .map((item, index) => ({ ...item, index }))
+      .reverse()
       .map(
-        (item, index) =>
-          `<path class="soft-chart-fill" d="${areaPath(item.points)}" fill="url(#${id}-${index}-fill)"></path>`
+        (item) =>
+          `<path class="soft-chart-fill" d="${areaPath(item.points)}" fill="url(#${id}-${item.index}-fill)"></path>`
       )
       .join("")}
     ${series
+      .map((item, index) => ({ ...item, index }))
+      .reverse()
       .map(
-        (item, index) => `
+        (item) => `
           <path
-            class="soft-chart-line series-${index}"
+            class="soft-chart-line series-${item.index}"
             d="${smoothPath(item.points)}"
             fill="none"
             stroke="${item.color}"
-            filter="url(#${id}-${index}-glow)"
             pathLength="1"
+            vector-effect="non-scaling-stroke"
           ></path>
         `
       )
@@ -834,23 +831,11 @@ class BabyDiaryDiaperCard extends HTMLElement {
         baby-diary-diaper-card .soft-chart-line {
           stroke-linecap: round;
           stroke-linejoin: round;
-          stroke-width: 3;
+          stroke-width: 2.2;
         }
 
         baby-diary-diaper-card .soft-chart-fill {
           opacity: 0.68;
-        }
-
-        baby-diary-diaper-card .multi-chart .series-0 {
-          stroke-width: 3.4;
-        }
-
-        baby-diary-diaper-card .multi-chart .series-1 {
-          stroke-width: 3;
-        }
-
-        baby-diary-diaper-card .multi-chart .series-2 {
-          stroke-width: 2.6;
         }
 
         baby-diary-diaper-card .actions {
