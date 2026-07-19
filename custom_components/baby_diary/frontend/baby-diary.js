@@ -331,9 +331,6 @@ const areaPath = (points) => {
   return `${line} L ${last.x} 100 L ${first.x} 100 Z`;
 };
 
-const formatSvgPoints = (points) =>
-  points.map((point) => `${point.x},${point.y}`).join(" ");
-
 const chartTemplate = ({ points, color, id, className = "" }) => `
   <svg
     class="soft-chart ${className}"
@@ -365,6 +362,57 @@ const chartTemplate = ({ points, color, id, className = "" }) => `
       filter="url(#${id}-glow)"
       pathLength="1"
     ></path>
+  </svg>
+`;
+
+const multiChartTemplate = ({ series, id, className = "" }) => `
+  <svg
+    class="soft-chart multi-chart ${className}"
+    viewBox="0 0 100 100"
+    preserveAspectRatio="none"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <defs>
+      ${series
+        .map(
+          (item, index) => `
+            <linearGradient id="${id}-${index}-fill" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="${item.color}" stop-opacity="0.28"></stop>
+              <stop offset="62%" stop-color="${item.color}" stop-opacity="0.12"></stop>
+              <stop offset="100%" stop-color="${item.color}" stop-opacity="0"></stop>
+            </linearGradient>
+            <filter id="${id}-${index}-glow" x="-10%" y="-35%" width="120%" height="170%">
+              <feGaussianBlur stdDeviation="1.05" result="blur"></feGaussianBlur>
+              <feMerge>
+                <feMergeNode in="blur"></feMergeNode>
+                <feMergeNode in="SourceGraphic"></feMergeNode>
+              </feMerge>
+            </filter>
+          `
+        )
+        .join("")}
+    </defs>
+    ${series
+      .map(
+        (item, index) =>
+          `<path class="soft-chart-fill" d="${areaPath(item.points)}" fill="url(#${id}-${index}-fill)"></path>`
+      )
+      .join("")}
+    ${series
+      .map(
+        (item, index) => `
+          <path
+            class="soft-chart-line series-${index}"
+            d="${smoothPath(item.points)}"
+            fill="none"
+            stroke="${item.color}"
+            filter="url(#${id}-${index}-glow)"
+            pathLength="1"
+          ></path>
+        `
+      )
+      .join("")}
   </svg>
 `;
 
@@ -436,40 +484,37 @@ class BabyDiaryDiaperCard extends HTMLElement {
     const xixiOnly = Math.max(0, xixiCount - ambosCount);
     const cocoOnly = Math.max(0, cocoCount - ambosCount);
     const maxCount = Math.max(diaperCount, xixiCount, cocoCount, 1);
+    const series = [
+      {
+        label: this._config.diapers_name || "Fraldas",
+        icon: this._config.diapers_icon || "baby:diaper",
+        color: this._config.diapers_color || COLORS.diaper,
+        count: diaperCount,
+        detail: "Hoje",
+        entityId: entities.diapers
+      },
+      {
+        label: this._config.xixi_name || "Xixis",
+        icon: this._config.xixi_icon || "baby:xixi",
+        color: this._config.xixi_color || COLORS.xixi,
+        count: xixiCount,
+        detail: `${xixiOnly} xixi · ${ambosCount} ambos`,
+        entityId: entities.xixi
+      },
+      {
+        label: this._config.coco_name || "Cocós",
+        icon: this._config.coco_icon || "baby:coco",
+        color: this._config.coco_color || COLORS.coco,
+        count: cocoCount,
+        detail: `${cocoOnly} cocó · ${ambosCount} ambos`,
+        entityId: entities.coco
+      }
+    ];
 
     return `
       <ha-card>
         <div class="baby-diaper">
-          <section class="metrics" aria-label="Fraldas de hoje">
-            ${this._metricTemplate({
-              label: this._config.diapers_name || "Fraldas",
-              icon: this._config.diapers_icon || "baby:diaper",
-              color: this._config.diapers_color || COLORS.diaper,
-              count: diaperCount,
-              detail: "Hoje",
-              entityId: entities.diapers,
-              maxCount,
-              primary: true
-            })}
-            ${this._metricTemplate({
-              label: this._config.xixi_name || "Xixis",
-              icon: this._config.xixi_icon || "baby:xixi",
-              color: this._config.xixi_color || COLORS.xixi,
-              count: xixiCount,
-              detail: `${xixiOnly} xixi · ${ambosCount} ambos`,
-              entityId: entities.xixi,
-              maxCount
-            })}
-            ${this._metricTemplate({
-              label: this._config.coco_name || "Cocós",
-              icon: this._config.coco_icon || "baby:coco",
-              color: this._config.coco_color || COLORS.coco,
-              count: cocoCount,
-              detail: `${cocoOnly} cocó · ${ambosCount} ambos`,
-              entityId: entities.coco,
-              maxCount
-            })}
-          </section>
+          ${this._overviewTemplate(series, maxCount)}
 
           <section class="actions" aria-label="Registar fralda">
             ${this._actionTemplate("Xixi", "baby:xixi", COLORS.xixi, "xixi")}
@@ -529,60 +574,84 @@ class BabyDiaryDiaperCard extends HTMLElement {
     `;
   }
 
-  _metricTemplate({ label, icon, color, count, detail, entityId, maxCount, primary = false }) {
-    const ratio = count <= 0 ? 0 : clamp(count / maxCount, 0.08, 1);
-    const chartId = `${this._chartId}-${slugify(label)}-${count}`;
+  _overviewTemplate(series, maxCount) {
+    const chartId = `${this._chartId}-diapers-${series.map((item) => item.count).join("-")}`;
+    const chartSeries = series.map((item, index) => ({
+      color: item.color,
+      points: this._combinedMetricChartPoints(item.count, maxCount, index)
+    }));
+
+    const stats = series
+      .map((item) => {
+        const detail = item.detail === "Hoje" ? `${item.count} hoje` : item.detail;
+
+        return `
+          <button
+            class="overview-stat"
+            type="button"
+            style="--accent:${item.color}"
+            data-open-history
+            data-entity-id="${escapeHtml(item.entityId)}"
+            title="Abrir histórico de ${escapeHtml(item.label)}"
+          >
+            <ha-icon icon="${escapeHtml(item.icon)}"></ha-icon>
+            <span>
+              <strong>${escapeHtml(item.label)}</strong>
+              <small>${escapeHtml(detail)}</small>
+            </span>
+          </button>
+        `;
+      })
+      .join("");
 
     return `
-      <button
-        class="metric ${primary ? "primary" : ""}"
-        type="button"
-        style="--accent:${color}"
-        data-open-history
-        data-entity-id="${escapeHtml(entityId)}"
-        title="Abrir histórico de ${escapeHtml(label)}"
-      >
-        <span class="metric-header">
-          <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
-          <span>${escapeHtml(label)}</span>
-        </span>
-        <span class="metric-count">${count}</span>
-        <span class="metric-detail">${escapeHtml(detail)}</span>
-        <span class="today-chart" aria-hidden="true">
-          ${chartTemplate({
-            points: this._metricChartPoints(ratio, primary),
-            color,
-            id: chartId,
-            className: primary ? "primary-chart" : ""
+      <section class="overview" aria-label="Fraldas de hoje">
+        <div class="overview-stats">
+          ${stats}
+        </div>
+        <button
+          class="overview-chart"
+          type="button"
+          style="--accent:${series[0].color}"
+          data-open-history
+          data-entity-id="${escapeHtml(series[0].entityId)}"
+          title="Abrir histórico de ${escapeHtml(series[0].label)}"
+        >
+          ${multiChartTemplate({
+            series: chartSeries,
+            id: chartId
           })}
-        </span>
-      </button>
+        </button>
+      </section>
     `;
   }
 
-  _metricChartPoints(ratio, primary) {
-    const baseline = primary ? 88 : 90;
+  _combinedMetricChartPoints(count, maxCount, variant) {
+    const ratio = count <= 0 ? 0 : clamp(count / maxCount, 0.06, 1);
+    const baseline = 91;
 
     if (ratio <= 0) {
       return [
         { x: 0, y: baseline },
-        { x: 32, y: baseline },
-        { x: 66, y: baseline },
+        { x: 34, y: baseline },
+        { x: 68, y: baseline },
         { x: 100, y: baseline }
       ];
     }
 
-    const target = primary ? 78 - ratio * 42 : 82 - ratio * 46;
-    const shoulder = primary ? target + 10 : target + 12;
+    const target = clamp(88 - ratio * 58 + variant * 6, 15, 88);
+    const earlyLift = ratio * (variant === 0 ? 8 : 14);
+    const softDip = ratio * (variant === 1 ? 4 : 1);
+    const lateLift = variant === 2 ? 7 : variant === 1 ? 3 : 0;
 
     return [
       { x: 0, y: baseline },
-      { x: 12, y: baseline },
-      { x: 24, y: clamp(baseline - 2, 18, baseline) },
-      { x: 36, y: clamp(shoulder, 16, 88) },
-      { x: 54, y: clamp(target + 5, 14, 86) },
-      { x: 74, y: clamp(target + 2, 12, 84) },
-      { x: 100, y: clamp(target, 10, 82) }
+      { x: 12, y: clamp(baseline - earlyLift * 0.35, 18, baseline) },
+      { x: 24, y: clamp(baseline - earlyLift + softDip, 18, baseline) },
+      { x: 38, y: clamp(target + 14 + lateLift, 16, baseline) },
+      { x: 54, y: clamp(target + 8 + lateLift, 14, baseline) },
+      { x: 74, y: clamp(target + 4, 12, baseline) },
+      { x: 100, y: clamp(target, 10, baseline) }
     ];
   }
 
@@ -653,94 +722,109 @@ class BabyDiaryDiaperCard extends HTMLElement {
           padding: 12px;
         }
 
-        baby-diary-diaper-card .metrics {
-          display: grid;
-          gap: 12px;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        baby-diary-diaper-card .metric {
+        baby-diary-diaper-card .overview {
           background:
             radial-gradient(
-              circle at 78% 8%,
-              color-mix(in srgb, var(--accent) 16%, transparent),
-              transparent 36%
+              circle at 88% 4%,
+              color-mix(in srgb, ${COLORS.ambos} 16%, transparent),
+              transparent 34%
             ),
             linear-gradient(
               180deg,
-              color-mix(in srgb, var(--accent) 8%, transparent),
-              color-mix(in srgb, var(--accent) 3%, transparent)
+              color-mix(in srgb, var(--primary-text-color) 5%, transparent),
+              color-mix(in srgb, var(--primary-text-color) 2%, transparent)
             ),
             color-mix(in srgb, var(--ha-card-background, var(--card-background-color)) 88%, transparent);
-          border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--divider-color));
+          border: 1px solid color-mix(in srgb, var(--primary-text-color) 18%, var(--divider-color));
           border-radius: var(--ha-card-border-radius, 12px);
+          display: grid;
+          gap: 10px;
+          overflow: hidden;
+          padding: 14px 16px 12px;
+          position: relative;
+        }
+
+        baby-diary-diaper-card .overview-stats {
+          display: grid;
+          gap: 8px;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          position: relative;
+          z-index: 1;
+        }
+
+        baby-diary-diaper-card .overview-stat {
+          align-items: center;
+          background: transparent;
+          border: 0;
+          border-radius: 10px;
           color: var(--primary-text-color);
           cursor: pointer;
-          display: grid;
-          gap: 6px;
-          min-height: 128px;
-          overflow: hidden;
-          padding: 16px;
-          position: relative;
+          display: flex;
+          gap: 9px;
+          min-width: 0;
+          padding: 8px;
           text-align: left;
         }
 
-        baby-diary-diaper-card .metric.primary {
-          grid-column: 1 / -1;
-          min-height: 146px;
+        baby-diary-diaper-card .overview-stat:hover {
+          background: color-mix(in srgb, var(--accent) 10%, transparent);
         }
 
-        baby-diary-diaper-card .metric:focus-visible,
+        baby-diary-diaper-card .overview-stat:focus-visible,
+        baby-diary-diaper-card .overview-chart:focus-visible,
         baby-diary-diaper-card .action:focus-visible {
           outline: 2px solid color-mix(in srgb, var(--accent) 76%, transparent);
           outline-offset: 2px;
         }
 
-        baby-diary-diaper-card .metric-header {
-          align-items: center;
-          color: var(--secondary-text-color);
-          display: flex;
-          font-weight: 800;
-          gap: 8px;
+        baby-diary-diaper-card .overview-stat ha-icon {
+          color: var(--accent);
+          flex: 0 0 auto;
+          height: 22px;
+          width: 22px;
+        }
+
+        baby-diary-diaper-card .overview-stat span {
+          display: grid;
+          gap: 1px;
           min-width: 0;
         }
 
-        baby-diary-diaper-card .metric-header ha-icon {
-          color: var(--accent);
-          height: 20px;
-          width: 20px;
-        }
-
-        baby-diary-diaper-card .metric-count {
-          font-size: 34px;
+        baby-diary-diaper-card .overview-stat strong {
+          font-size: 14px;
           font-weight: 800;
-          line-height: 1;
-        }
-
-        baby-diary-diaper-card .metric-detail {
-          color: var(--secondary-text-color);
-          font-size: 13px;
-          min-height: 18px;
-        }
-
-        baby-diary-diaper-card .today-chart {
-          align-self: end;
-          display: block;
-          height: 54px;
-          margin-top: 4px;
           overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        baby-diary-diaper-card .overview-stat small {
+          color: var(--secondary-text-color);
+          font-size: 12px;
+          line-height: 1.2;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        baby-diary-diaper-card .overview-chart {
+          background: transparent;
+          border: 0;
+          cursor: pointer;
+          display: block;
+          height: 132px;
+          margin: -2px -4px 0;
+          overflow: hidden;
+          padding: 0;
           position: relative;
           width: 100%;
         }
 
-        baby-diary-diaper-card .metric.primary .today-chart {
-          height: 68px;
-        }
-
         baby-diary-diaper-card .soft-chart {
-          bottom: -7px;
+          bottom: 0;
           display: block;
-          height: calc(100% + 14px);
+          height: 100%;
           left: 0;
           overflow: hidden;
           position: absolute;
@@ -751,27 +835,15 @@ class BabyDiaryDiaperCard extends HTMLElement {
         baby-diary-diaper-card .soft-chart-line {
           stroke-linecap: round;
           stroke-linejoin: round;
-          stroke-width: 4;
+          stroke-width: 3.7;
         }
 
         baby-diary-diaper-card .soft-chart-fill {
-          opacity: 0.95;
+          opacity: 0.82;
         }
 
-        baby-diary-diaper-card .today-chart::after {
-          background: linear-gradient(
-            90deg,
-            transparent,
-            color-mix(in srgb, var(--primary-text-color) 14%, transparent),
-            transparent
-          );
-          bottom: 11px;
-          content: "";
-          height: 1px;
-          left: 0;
-          position: absolute;
-          display: block;
-          right: 0;
+        baby-diary-diaper-card .multi-chart .series-0 {
+          stroke-width: 4.2;
         }
 
         baby-diary-diaper-card .actions {
@@ -832,18 +904,38 @@ class BabyDiaryDiaperCard extends HTMLElement {
             padding: 10px;
           }
 
-          baby-diary-diaper-card .metrics,
           baby-diary-diaper-card .actions {
             gap: 10px;
           }
 
-          baby-diary-diaper-card .metric {
-            min-height: 116px;
-            padding: 14px;
+          baby-diary-diaper-card .overview {
+            padding: 12px 12px 10px;
           }
 
-          baby-diary-diaper-card .metric.primary {
-            min-height: 132px;
+          baby-diary-diaper-card .overview-stats {
+            gap: 4px;
+          }
+
+          baby-diary-diaper-card .overview-stat {
+            gap: 6px;
+            padding: 6px;
+          }
+
+          baby-diary-diaper-card .overview-stat ha-icon {
+            height: 19px;
+            width: 19px;
+          }
+
+          baby-diary-diaper-card .overview-stat strong {
+            font-size: 13px;
+          }
+
+          baby-diary-diaper-card .overview-stat small {
+            font-size: 11px;
+          }
+
+          baby-diary-diaper-card .overview-chart {
+            height: 118px;
           }
 
           baby-diary-diaper-card .action {
