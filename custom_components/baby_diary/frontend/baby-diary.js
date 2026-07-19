@@ -763,10 +763,8 @@ class BabyDiaryDiaperCard extends HTMLElement {
 
         baby-diary-diaper-card .overview-header {
           align-items: flex-start;
-          display: flex;
-          flex-wrap: wrap;
-          gap: 16px;
-          justify-content: space-between;
+          display: grid;
+          gap: 14px;
           position: relative;
           z-index: 1;
         }
@@ -778,7 +776,6 @@ class BabyDiaryDiaperCard extends HTMLElement {
           color: var(--primary-text-color);
           cursor: pointer;
           display: grid;
-          flex: 1 1 180px;
           margin: -8px 0 -2px -8px;
           min-width: 0;
           padding: 8px;
@@ -828,7 +825,6 @@ class BabyDiaryDiaperCard extends HTMLElement {
 
         baby-diary-diaper-card .overview-stats {
           display: grid;
-          flex: 1 1 260px;
           gap: 10px;
           grid-template-columns: repeat(2, minmax(0, 1fr));
           min-width: min(260px, 100%);
@@ -993,7 +989,6 @@ class BabyDiaryDiaperCard extends HTMLElement {
           }
 
           baby-diary-diaper-card .overview-header {
-            display: grid;
             gap: 10px;
           }
 
