@@ -417,7 +417,8 @@ const actionButtonTemplate = ({
   dataValue,
   detail = "",
   className = "",
-  active = false
+  active = false,
+  reserveDetail = false
 }) => {
   const classes = ["action", className, active ? "active" : ""].filter(Boolean).join(" ");
   const actionAttribute = dataAttribute
@@ -425,6 +426,11 @@ const actionButtonTemplate = ({
       ? ` ${dataAttribute}`
       : ` ${dataAttribute}="${escapeHtml(dataValue)}"`
     : "";
+  const detailMarkup = detail
+    ? `<small>${escapeHtml(detail)}</small>`
+    : reserveDetail
+      ? `<small class="reserved-detail" aria-hidden="true">&nbsp;</small>`
+      : "";
 
   return `
     <button
@@ -436,7 +442,7 @@ const actionButtonTemplate = ({
       <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
       <span>
         <strong>${escapeHtml(label)}</strong>
-        ${detail ? `<small>${escapeHtml(detail)}</small>` : ""}
+        ${detailMarkup}
       </span>
     </button>
   `;
@@ -698,6 +704,10 @@ const overviewCardStyles = (selector, accentColor) => `
     font-size: 12px;
     font-weight: 600;
     line-height: 1.25;
+  }
+
+  ${selector} .action small.reserved-detail {
+    visibility: hidden;
   }
 
   ${selector} .missing {
@@ -1242,11 +1252,11 @@ class BabyDiaryFeedingCard extends HTMLElement {
                 <div class="eyebrow">
                   <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
                   <span>${escapeHtml(name)}</span>
-                  <span class="feeding-status ${active ? "active" : ""}">${statusLabel}</span>
                 </div>
                 <div class="total">${formatFeedingCount(count)}</div>
                 <div class="subtitle">Hoje</div>
               </button>
+              <span class="feeding-status ${active ? "active" : ""}">${statusLabel}</span>
               <div class="overview-stats feeding-stats">
                 ${statCards}
               </div>
@@ -1270,7 +1280,8 @@ class BabyDiaryFeedingCard extends HTMLElement {
                 dataAttribute: "data-toggle-feeding",
                 detail: buttonSubtitle,
                 className: "feeding-action",
-                active
+                active,
+                reserveDetail: true
               })}
             </section>
           </section>
@@ -1531,24 +1542,31 @@ class BabyDiaryFeedingCard extends HTMLElement {
       <style>
         ${overviewCardStyles("baby-diary-feeding-card", COLORS.mamada)}
 
-        baby-diary-feeding-card .eyebrow .feeding-status {
+        baby-diary-feeding-card .overview-title {
+          padding-right: 84px;
+        }
+
+        baby-diary-feeding-card .feeding-status {
           background: color-mix(in srgb, var(--primary-text-color) 8%, transparent);
           border: 1px solid color-mix(in srgb, var(--divider-color) 70%, transparent);
           border-radius: 999px;
           color: var(--secondary-text-color);
-          flex: 0 0 auto;
           font-size: 9px;
           font-weight: 800;
           line-height: 1;
-          margin-left: 2px;
           overflow: visible;
           padding: 3px 6px;
+          pointer-events: none;
+          position: absolute;
+          right: 0;
           text-overflow: clip;
+          top: 0;
           text-transform: uppercase;
           white-space: nowrap;
+          z-index: 2;
         }
 
-        baby-diary-feeding-card .eyebrow .feeding-status.active {
+        baby-diary-feeding-card .feeding-status.active {
           background: color-mix(in srgb, ${COLORS.mamada} 16%, transparent);
           border-color: color-mix(in srgb, ${COLORS.mamada} 50%, transparent);
           color: ${COLORS.mamada};
