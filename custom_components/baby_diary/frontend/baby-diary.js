@@ -417,8 +417,7 @@ const actionButtonTemplate = ({
   dataValue,
   detail = "",
   className = "",
-  active = false,
-  reserveDetail = false
+  active = false
 }) => {
   const classes = ["action", className, active ? "active" : ""].filter(Boolean).join(" ");
   const actionAttribute = dataAttribute
@@ -426,11 +425,6 @@ const actionButtonTemplate = ({
       ? ` ${dataAttribute}`
       : ` ${dataAttribute}="${escapeHtml(dataValue)}"`
     : "";
-  const detailMarkup = detail
-    ? `<small>${escapeHtml(detail)}</small>`
-    : reserveDetail
-      ? `<small class="reserved-detail" aria-hidden="true">&nbsp;</small>`
-      : "";
 
   return `
     <button
@@ -442,7 +436,7 @@ const actionButtonTemplate = ({
       <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
       <span>
         <strong>${escapeHtml(label)}</strong>
-        ${detailMarkup}
+        ${detail ? `<small>${escapeHtml(detail)}</small>` : ""}
       </span>
     </button>
   `;
@@ -704,10 +698,6 @@ const overviewCardStyles = (selector, accentColor) => `
     font-size: 12px;
     font-weight: 600;
     line-height: 1.25;
-  }
-
-  ${selector} .action small.reserved-detail {
-    visibility: hidden;
   }
 
   ${selector} .missing {
@@ -1206,9 +1196,8 @@ class BabyDiaryFeedingCard extends HTMLElement {
     );
     const name = this._config.name || "Mamadas";
     const icon = this._config.icon || "baby:mamada";
-    const statusLabel = active ? "Em curso" : "Em pausa";
+    const statusLabel = active ? `EM CURSO · ${formatDurationPrecise(currentSeconds)}` : "EM PAUSA";
     const buttonTitle = active ? "Parar mamada" : "Iniciar mamada";
-    const buttonSubtitle = active ? formatDurationPrecise(currentSeconds) : "";
     const averageDurationText =
       stats.averageDuration === "Sem dados" ? "sem média" : `${stats.averageDuration} média`;
     const averageSpacingText =
@@ -1278,10 +1267,8 @@ class BabyDiaryFeedingCard extends HTMLElement {
                 icon,
                 color: COLORS.mamada,
                 dataAttribute: "data-toggle-feeding",
-                detail: buttonSubtitle,
                 className: "feeding-action",
-                active,
-                reserveDetail: true
+                active
               })}
             </section>
           </section>
@@ -1543,7 +1530,7 @@ class BabyDiaryFeedingCard extends HTMLElement {
         ${overviewCardStyles("baby-diary-feeding-card", COLORS.mamada)}
 
         baby-diary-feeding-card .overview-title {
-          padding-right: 84px;
+          padding-right: 132px;
         }
 
         baby-diary-feeding-card .feeding-status {
@@ -1561,7 +1548,6 @@ class BabyDiaryFeedingCard extends HTMLElement {
           right: 0;
           text-overflow: clip;
           top: 0;
-          text-transform: uppercase;
           white-space: nowrap;
           z-index: 2;
         }
