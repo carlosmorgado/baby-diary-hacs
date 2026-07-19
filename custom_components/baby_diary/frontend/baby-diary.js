@@ -417,7 +417,8 @@ const actionButtonTemplate = ({
   dataValue,
   detail = "",
   className = "",
-  active = false
+  active = false,
+  reserveDetail = false
 }) => {
   const classes = ["action", className, active ? "active" : ""].filter(Boolean).join(" ");
   const actionAttribute = dataAttribute
@@ -425,6 +426,11 @@ const actionButtonTemplate = ({
       ? ` ${dataAttribute}`
       : ` ${dataAttribute}="${escapeHtml(dataValue)}"`
     : "";
+  const detailMarkup = detail
+    ? `<small>${escapeHtml(detail)}</small>`
+    : reserveDetail
+      ? `<small class="reserved-detail" aria-hidden="true">&nbsp;</small>`
+      : "";
 
   return `
     <button
@@ -436,7 +442,7 @@ const actionButtonTemplate = ({
       <ha-icon icon="${escapeHtml(icon)}"></ha-icon>
       <span>
         <strong>${escapeHtml(label)}</strong>
-        ${detail ? `<small>${escapeHtml(detail)}</small>` : ""}
+        ${detailMarkup}
       </span>
     </button>
   `;
@@ -698,6 +704,10 @@ const overviewCardStyles = (selector, accentColor) => `
     font-size: 12px;
     font-weight: 600;
     line-height: 1.25;
+  }
+
+  ${selector} .action small.reserved-detail {
+    visibility: hidden;
   }
 
   ${selector} .missing {
@@ -1270,7 +1280,8 @@ class BabyDiaryFeedingCard extends HTMLElement {
                 dataAttribute: "data-toggle-feeding",
                 detail: buttonSubtitle,
                 className: "feeding-action",
-                active
+                active,
+                reserveDetail: true
               })}
             </section>
           </section>
