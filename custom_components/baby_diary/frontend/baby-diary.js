@@ -297,6 +297,16 @@ const formatFeedingCount = (count) => {
   return `${value} mamadas`;
 };
 
+const formatDiaperCount = (count) => {
+  const value = Math.max(0, Math.round(Number(count) || 0));
+
+  if (value === 1) {
+    return "1 fralda";
+  }
+
+  return `${value} fraldas`;
+};
+
 const splitService = (service) => {
   const [domain, action] = String(service || "").split(".");
   return { domain, action };
@@ -572,16 +582,15 @@ class BabyDiaryDiaperCard extends HTMLElement {
   }
 
   _overviewTemplate(series, maxCount) {
+    const [total, ...breakdown] = series;
     const chartId = `${this._chartId}-diapers-${series.map((item) => item.count).join("-")}`;
     const chartSeries = series.map((item) => ({
       color: item.color,
       points: this._combinedMetricChartPoints(item.count, maxCount)
     }));
 
-    const stats = series
+    const stats = breakdown
       .map((item) => {
-        const detail = item.detail === "Hoje" ? `${item.count} hoje` : item.detail;
-
         return `
           <button
             class="overview-stat"
@@ -594,7 +603,7 @@ class BabyDiaryDiaperCard extends HTMLElement {
             <ha-icon icon="${escapeHtml(item.icon)}"></ha-icon>
             <span>
               <strong>${escapeHtml(item.label)}</strong>
-              <small>${escapeHtml(detail)}</small>
+              <small>${escapeHtml(item.detail)}</small>
             </span>
           </button>
         `;
@@ -603,16 +612,33 @@ class BabyDiaryDiaperCard extends HTMLElement {
 
     return `
       <section class="overview" aria-label="Fraldas de hoje">
-        <div class="overview-stats">
-          ${stats}
-        </div>
+        <header class="overview-header">
+          <button
+            class="overview-title"
+            type="button"
+            style="--accent:${total.color}"
+            data-open-history
+            data-entity-id="${escapeHtml(total.entityId)}"
+            title="Abrir histórico de ${escapeHtml(total.label)}"
+          >
+            <div class="eyebrow">
+              <ha-icon icon="${escapeHtml(total.icon)}"></ha-icon>
+              <span>${escapeHtml(total.label)}</span>
+            </div>
+            <div class="total">${formatDiaperCount(total.count)}</div>
+            <div class="subtitle">Hoje</div>
+          </button>
+          <div class="overview-stats">
+            ${stats}
+          </div>
+        </header>
         <button
           class="overview-chart"
           type="button"
-          style="--accent:${series[0].color}"
+          style="--accent:${total.color}"
           data-open-history
-          data-entity-id="${escapeHtml(series[0].entityId)}"
-          title="Abrir histórico de ${escapeHtml(series[0].label)}"
+          data-entity-id="${escapeHtml(total.entityId)}"
+          title="Abrir histórico de ${escapeHtml(total.label)}"
         >
           ${multiChartTemplate({
             series: chartSeries,
@@ -740,32 +766,94 @@ class BabyDiaryDiaperCard extends HTMLElement {
           position: relative;
         }
 
-        baby-diary-diaper-card .overview-stats {
-          display: grid;
-          gap: 8px;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+        baby-diary-diaper-card .overview-header {
+          align-items: flex-start;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 16px;
+          justify-content: space-between;
           position: relative;
           z-index: 1;
         }
 
-        baby-diary-diaper-card .overview-stat {
-          align-items: center;
+        baby-diary-diaper-card .overview-title {
           background: transparent;
           border: 0;
           border-radius: 10px;
           color: var(--primary-text-color);
           cursor: pointer;
-          display: flex;
-          gap: 9px;
+          display: grid;
+          flex: 1 1 180px;
+          margin: -8px 0 -2px -8px;
           min-width: 0;
           padding: 8px;
           text-align: left;
         }
 
+        baby-diary-diaper-card .overview-title:hover,
         baby-diary-diaper-card .overview-stat:hover {
           background: color-mix(in srgb, var(--accent) 10%, transparent);
         }
 
+        baby-diary-diaper-card .eyebrow {
+          align-items: center;
+          color: var(--secondary-text-color);
+          display: flex;
+          font-weight: 700;
+          gap: 8px;
+          min-width: 0;
+        }
+
+        baby-diary-diaper-card .eyebrow ha-icon {
+          color: var(--accent);
+          flex: 0 0 auto;
+          height: 22px;
+          width: 22px;
+        }
+
+        baby-diary-diaper-card .eyebrow span {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        baby-diary-diaper-card .total {
+          font-size: 42px;
+          font-weight: 800;
+          line-height: 1;
+          margin-top: 12px;
+          white-space: nowrap;
+        }
+
+        baby-diary-diaper-card .subtitle {
+          color: var(--secondary-text-color);
+          font-size: 14px;
+          margin-top: 6px;
+        }
+
+        baby-diary-diaper-card .overview-stats {
+          display: grid;
+          flex: 1 1 260px;
+          gap: 10px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          min-width: min(260px, 100%);
+        }
+
+        baby-diary-diaper-card .overview-stat {
+          align-items: center;
+          background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
+          border: 1px solid color-mix(in srgb, var(--divider-color) 75%, transparent);
+          border-radius: 12px;
+          color: var(--primary-text-color);
+          cursor: pointer;
+          display: flex;
+          gap: 9px;
+          min-width: 0;
+          padding: 10px 12px;
+          text-align: left;
+        }
+
+        baby-diary-diaper-card .overview-title:focus-visible,
         baby-diary-diaper-card .overview-stat:focus-visible,
         baby-diary-diaper-card .overview-chart:focus-visible,
         baby-diary-diaper-card .action:focus-visible {
@@ -904,8 +992,24 @@ class BabyDiaryDiaperCard extends HTMLElement {
             padding: 12px 12px 10px;
           }
 
+          baby-diary-diaper-card .overview-header {
+            display: grid;
+            gap: 10px;
+          }
+
+          baby-diary-diaper-card .overview-title {
+            margin: -6px 0 0 -6px;
+            padding: 6px;
+          }
+
+          baby-diary-diaper-card .total {
+            font-size: 36px;
+            margin-top: 10px;
+          }
+
           baby-diary-diaper-card .overview-stats {
             gap: 4px;
+            min-width: 0;
           }
 
           baby-diary-diaper-card .overview-stat {
